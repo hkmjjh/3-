@@ -1,0 +1,2656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚨 SOAP CHEF V5 - 응급 임상 기록 사정 모드</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Black Han Sans & Noto Sans KR -->
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Inter:wght@300;400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      color: #f8fafc;
+      overflow-x: hidden;
+      transition: background-color 0.2s ease;
+    }
+    
+    .font-brand {
+      font-family: 'Black Han Sans', sans-serif;
+    }
+
+    /* Glassmorphism Panels */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    /* Heartbeat animation for emergency lights */
+    @keyframes siren {
+      0%, 100% { background-color: rgba(239, 68, 68, 0.15); box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.3); }
+      50% { background-color: rgba(239, 68, 68, 0.4); box-shadow: inset 0 0 30px rgba(239, 68, 68, 0.6); }
+    }
+    
+    .siren-active {
+      animation: siren 1.2s infinite alternate;
+    }
+
+    /* Dynamic burger layering transitions */
+    .burger-piece {
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform: translateY(-80px);
+      opacity: 0;
+    }
+    
+    .burger-piece.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Drag over style */
+    .drag-over {
+      background: rgba(244, 63, 94, 0.18) !important;
+      border-color: #f43f5e !important;
+      transform: scale(1.02);
+    }
+
+    /* Selection styling for A and P cards */
+    .card-selected-a {
+      border-color: #f59e0b !important;
+      background-color: rgba(245, 158, 11, 0.15) !important;
+    }
+    .card-selected-p {
+      border-color: #3b82f6 !important;
+      background-color: rgba(59, 130, 246, 0.15) !important;
+    }
+    
+    /* Toast styles */
+    .toast-enter {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+    .toast-active {
+      transform: translateY(0);
+      opacity: 1;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Custom scrollbar for dark panels */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(244, 63, 94, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(244, 63, 94, 0.6);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col justify-between transition-all duration-300">
+
+  <!-- Top Emergency / Siren Header -->
+  <div id="emergency-bar" class="w-full py-1.5 text-center font-bold text-xs tracking-widest hidden transition-all duration-300">
+    ⚠️ CRITICAL LEVEL: EXTREME CLINICAL TRIAGE SIMULATION IN PROGRESS ⚠️
+  </div>
+
+  <header class="glass-panel mx-4 mt-4 px-6 py-4 rounded-2xl flex justify-between items-center border-b border-slate-800/80 z-10">
+    <div class="flex items-center gap-3">
+      <div class="bg-rose-500/10 p-2.5 rounded-xl text-rose-500 border border-rose-500/20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-orange-400 via-rose-400 to-red-500 bg-clip-text text-transparent font-brand">SOAP CHEF <span class="text-sm text-slate-400">V5 EMERGENCY</span></h1>
+        <p class="text-[11px] text-slate-400">PA 전문 임상 사정 & 임상 기록지 작성(SOAP) 트레이닝</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div id="user-display" class="hidden text-sm font-semibold bg-slate-900 px-4 py-1.5 rounded-full border border-slate-800 text-slate-300 flex items-center gap-2">
+        <span>👨‍⚕️ <span id="user-badge" class="text-orange-400">임상학도</span></span>
+        <button onclick="handleLogout()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-700 text-slate-400 transition ml-2">🚪 로그아웃</button>
+      </div>
+      <button id="btn-cert-lobby" onclick="showLobbyCertificate()" class="hidden text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700 text-slate-300 transition font-medium">
+        🎓 이수증 간편조회
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Stage -->
+  <main class="flex-grow flex items-center justify-center p-4">
+
+    <!-- SCREEN 1: LOGIN SCREEN -->
+    <div id="screen-login" class="screen w-full max-w-md glass-panel p-8 rounded-3xl text-center space-y-6 animate-fade-in">
+      <div class="w-24 h-24 mx-auto bg-gradient-to-tr from-orange-500 to-rose-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-rose-950/30">
+        <span class="text-5xl">🍔</span>
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold font-brand text-slate-100">임상기록 전문 주방 입장</h2>
+        <p class="text-sm text-slate-400 mt-1">PA로써 SOAP 진단 기록(Assessment)과 임상 수행 계획(Plan)을 완벽 수립하십시오.</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-left text-xs font-semibold text-slate-400 mb-1 ml-1">PA 임상전문가 성명</label>
+          <input id="input-username" type="text" placeholder="예: 홍길동" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 transition">
+        </div>
+        <div>
+          <label class="block text-left text-xs font-semibold text-slate-400 mb-1 ml-1">소속 기수 / 닉네임</label>
+          <input id="input-nickname" type="text" placeholder="예: PA" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 transition">
+        </div>
+        
+        <button onclick="enterChefKitchen()" class="w-full py-4 bg-gradient-to-r from-orange-500 to-rose-600 rounded-xl font-bold text-slate-50 shadow-lg shadow-rose-950/50 hover:from-orange-400 hover:to-rose-500 transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
+          💉 임상 기록실 입장 및 면허 훈련 동의
+        </button>
+      </div>
+      
+      <div class="pt-4 border-t border-slate-900 flex justify-around text-xs text-slate-400 font-medium">
+        <span>🩺 1~4단계 통합 검정</span>
+        <span>🔥 오답 지옥 복습(5단계)</span>
+        <span>🏆 1급 이수증 정밀분석</span>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: MAIN MENU SCREEN -->
+    <div id="screen-main" class="screen w-full max-w-2xl glass-panel p-8 rounded-3xl text-center space-y-6 hidden">
+      <div class="space-y-2">
+        <h2 class="text-2xl font-bold font-brand text-slate-100">반갑습니다, <span id="text-username" class="text-orange-400">주방장</span>님!</h2>
+        <p class="text-sm text-slate-400">임상 기록지 작성 및 중재 수행 분석 검정 시작</p>
+      </div>
+
+      <!-- User Stats Board -->
+      <div class="grid grid-cols-2 gap-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-900 text-center max-w-md mx-auto">
+        <div class="border-r border-slate-900">
+          <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wide">총 완수 횟수</p>
+          <span id="lobby-attempts" class="text-lg font-black text-rose-400">0회</span>
+        </div>
+        <div>
+          <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wide">보관된 이수증</p>
+          <span id="lobby-certs" class="text-lg font-black text-emerald-400">0개</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Start Clinical Run -->
+        <button onclick="startStandardTriageRun()" class="group flex flex-col justify-between p-6 bg-rose-950/10 hover:bg-rose-950/20 rounded-2xl border border-rose-900/40 hover:border-rose-500 transition-all text-left">
+          <div class="space-y-3">
+            <span class="text-3xl p-2 bg-rose-500/10 rounded-xl inline-block group-hover:scale-110 transition duration-300">🏥</span>
+            <h3 class="text-lg font-bold text-slate-100">임상 검정 통합 개시</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">1단계 명확매칭형부터 4단계 안전 대응까지 각 10문항을 릴레이 검정하고, 오답이 발생하는 경우 즉시 5단계 맞춤 복습을 진행합니다.</p>
+          </div>
+          <span class="mt-6 text-xs text-rose-400 font-bold flex items-center gap-1">트레이닝 시작 &rarr;</span>
+        </button>
+
+        <!-- Dynamic License Lookup -->
+        <button id="btn-menu-cert" onclick="viewLicenseFromMenu()" class="group flex flex-col justify-between p-6 bg-slate-900/80 hover:bg-slate-800 rounded-2xl border border-slate-800 hover:border-orange-500 transition-all text-left opacity-60 cursor-not-allowed">
+          <div class="space-y-3">
+            <span class="text-3xl p-2 bg-orange-500/10 rounded-xl inline-block group-hover:scale-110 transition duration-300">🎓</span>
+            <h3 class="text-lg font-bold text-slate-100">정밀 이수증 조회</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">마지막 임상 훈련 완수 결과를 통계 시각화한 Canvas 기반 고해상도 이수증을 실시간 확인 및 다운로드합니다.</p>
+          </div>
+          <span id="menu-cert-status" class="mt-6 text-xs text-orange-400 font-bold flex items-center gap-1">테스트 완수 후 활성화</span>
+        </button>
+      </div>
+
+      <!-- History Certificates Panel Trigger -->
+      <div class="pt-2">
+        <button onclick="openCertHistoryModal()" class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-100 rounded-xl font-bold text-xs border border-slate-800 hover:border-emerald-500 transition flex items-center justify-center gap-2 shadow-lg">
+          📁 이전 이수증 누적 보관함 조회 (<span id="btn-history-count" class="text-emerald-400 font-bold">0</span>개)
+        </button>
+      </div>
+
+      <div class="bg-slate-950/80 p-5 rounded-2xl text-xs text-slate-400 space-y-2.5 text-left border border-slate-900">
+        <p class="font-bold text-slate-300 flex items-center gap-1">💡 중요 임상 진행 규칙</p>
+        <p class="leading-relaxed">1. <b>단계별 3회 오답 탈락제</b>: 각 단계에서 3회 이상 틀리면 즉시 경고가 발생하며 해당 단계를 처음(1번 문항)부터 강제 재도전합니다.</p>
+        <p class="leading-relaxed">2. <b>자동 5단계 생성</b>: 1~4단계 중 틀린 문제들이 가상 데이터베이스에 실시간으로 수집되며, 5단계에서 이 복습 문항을 전부 완수하여야 이수증 발급 권한을 획득합니다.</p>
+        <p class="leading-relaxed">3. <b>랜덤 정답 배치</b>: 치팅 방지를 위해 보기 문항 및 정답 위치는 동적으로 무작위 셔플링됩니다.</p>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: ACTIVE GAMEPLAY SCREEN -->
+    <div id="screen-game" class="screen w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-6 hidden">
+      
+      <!-- Left side: SOAP Clipboard Monitor -->
+      <div class="lg:col-span-7 space-y-4">
+        <!-- Vitals & Monitor Header (Without Timer Text) -->
+        <div class="glass-panel p-5 rounded-2xl flex justify-between items-center relative overflow-hidden border-b border-rose-500/10">
+          <div class="flex items-center gap-4">
+            <div id="vitals-heartbeat" class="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 tracking-wider">CURRENT STAGE LEVEL</p>
+              <h3 id="game-stage-indicator" class="text-lg font-bold font-brand tracking-wide text-rose-500">1단계: 명확매칭형</h3>
+            </div>
+          </div>
+          
+          <!-- Strikes & Pause/Home Actions -->
+          <div class="text-right flex items-center gap-6 flex-wrap justify-end">
+            <div>
+              <p class="text-xs text-slate-400 tracking-wider">STRIKES LIMIT</p>
+              <div id="strikes-display" class="text-xl flex gap-1 justify-end mt-0.5">
+                🔴 🔴 🔴
+              </div>
+            </div>
+            <!-- Action Triggers -->
+            <div class="flex gap-2">
+              <button onclick="pauseTriageGame()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-xs font-bold border border-slate-700 flex items-center gap-1 transition">
+                <span>⏸</span> 일시 정지
+              </button>
+              <button onclick="returnToMainMenu()" class="px-3.5 py-1.5 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 rounded-lg text-xs font-bold border border-rose-800/40 flex items-center gap-1 transition">
+                <span>🏠</span> 메인으로
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Soap Case Sheet -->
+        <div class="glass-panel p-6 rounded-2xl space-y-4 relative overflow-hidden border-l-4 border-rose-500">
+          <div class="absolute top-0 right-0 p-2 bg-slate-900 text-slate-400 font-mono text-xs rounded-bl-xl border-l border-b border-slate-800">
+            CASE <span id="case-index">01</span> / <span id="case-total">10</span>
+          </div>
+
+          <div class="space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+              <span>🩺 EMERGENCY PATIENT CASE REPORT</span>
+              <span id="badge-defect-cat" class="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">진단 매칭</span>
+            </h4>
+            
+            <!-- SOAP DETAILS -->
+            <div class="space-y-3 bg-slate-950/80 p-4 rounded-xl border border-slate-900">
+              <div class="flex gap-3">
+                <span class="font-bold text-amber-500 flex-shrink-0 bg-amber-500/10 px-2 py-0.5 rounded text-xs h-fit border border-amber-500/20">S (Subjective)</span>
+                <p id="soap-s" class="text-slate-300 text-sm italic font-medium leading-relaxed">"가슴이 쥐어짜듯 너무 아파요..."</p>
+              </div>
+              <div class="border-t border-slate-900/60 my-2"></div>
+              <div class="flex gap-3">
+                <span class="font-bold text-sky-400 flex-shrink-0 bg-sky-500/10 px-2 py-0.5 rounded text-xs h-fit border border-sky-500/20">O (Objective)</span>
+                <p id="soap-o" class="text-slate-300 text-sm font-medium leading-relaxed">혈압 160/95mmHg, Troponin-I 양성 반응</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-indigo-950/10 border border-indigo-900/40 p-3 rounded-xl">
+            <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block mb-0.5">🚨 PA MISSION (ASSESSMENT & PLAN)</span>
+            <p id="game-mission-guide" class="text-xs text-slate-300 font-semibold leading-relaxed">이 환자에게 적합한 가장 정확한 임상 사정 진단(A) 및 위임 수행 계획(P) 카드를 각각 조리하세요!</p>
+          </div>
+        </div>
+
+        <!-- Answer Options Cards Grid for A & P (Dual Drag Pools) -->
+        <div class="space-y-4">
+          <p class="text-xs text-slate-400 ml-1 flex justify-between">
+            <span>👇 각 열에서 알맞은 카드를 드래그하거나 직접 터치하여 슬롯에 배치하세요.</span>
+            <span id="strike-warning-text" class="text-rose-500 font-bold animate-pulse hidden">3회 오답 시 단계가 강제 리셋됩니다!</span>
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Diagnosis (A) Column -->
+            <div class="space-y-2">
+              <span class="text-xs text-amber-400 font-bold block ml-1">A : 임상 진단 (Assessment) 보기 [4택]</span>
+              <div id="options-grid-a" class="space-y-2">
+                <!-- Javascript fills this with 4 Assessment options -->
+              </div>
+            </div>
+
+            <!-- Medical Plan (P) Column -->
+            <div class="space-y-2">
+              <span class="text-xs text-sky-400 font-bold block ml-1">P : 수행 및 처치 계획 (Plan) 보기 [4택]</span>
+              <div id="options-grid-p" class="space-y-2">
+                <!-- Javascript fills this with 4 Plan options -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right side: Visual Burger Assembly Platform & Scoreboard -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+        
+        <!-- Scoreboard Panel -->
+        <div class="glass-panel p-5 rounded-2xl grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-900">
+            <p class="text-[10px] text-slate-500">ACCUMULATED SCORE</p>
+            <span id="scoreboard-score" class="text-2xl font-extrabold text-emerald-400">0</span>
+          </div>
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-900">
+            <p class="text-[10px] text-slate-500">STREAK COMBO</p>
+            <span id="scoreboard-combo" class="text-2xl font-extrabold text-rose-400">0</span>
+          </div>
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-900">
+            <p class="text-[10px] text-slate-500">TOTAL COOKED</p>
+            <span id="scoreboard-cooked" class="text-2xl font-extrabold text-orange-400">0</span>
+          </div>
+        </div>
+
+        <!-- Interactive Drag Zone & Burger Stack Graphic Container -->
+        <div class="glass-panel p-5 rounded-2xl flex-grow flex flex-col justify-between items-center min-h-[420px] relative">
+          
+          <!-- Drop Zone Overlay / Slot A and Slot P -->
+          <div class="w-full space-y-2.5">
+            <!-- Slot A (Assessment) -->
+            <div id="drop-zone-a" class="w-full py-3.5 border-2 border-dashed border-amber-500/40 rounded-xl bg-amber-950/20 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer"
+                 ondrop="handleCardDrop(event)" ondragover="allowCardDragOver(event)" ondragleave="handleCardDragLeave(event)">
+              <span class="text-xs font-bold text-amber-400 flex items-center gap-1">🍔 [A] 진단 패티 슬롯</span>
+              <p class="text-[10.5px] text-slate-300 mt-0.5 text-center px-4 leading-normal font-medium">선택된 진단: <span id="text-selected-opt-a" class="text-orange-400 font-bold italic">없음</span></p>
+            </div>
+
+            <!-- Slot P (Plan) -->
+            <div id="drop-zone-p" class="w-full py-3.5 border-2 border-dashed border-sky-500/40 rounded-xl bg-sky-950/20 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer"
+                 ondrop="handleCardDrop(event)" ondragover="allowCardDragOver(event)" ondragleave="handleCardDragLeave(event)">
+              <span class="text-xs font-bold text-sky-400 flex items-center gap-1">🍯 [P] 수행 계획 소스 슬롯</span>
+              <p class="text-[10.5px] text-slate-300 mt-0.5 text-center px-4 leading-normal font-medium">선택된 중재: <span id="text-selected-opt-p" class="text-blue-400 font-bold italic">없음</span></p>
+            </div>
+
+            <!-- Active Chart Submission Trigger -->
+            <button onclick="evaluateDualMatchingAnswer()" class="w-full py-3 bg-gradient-to-r from-orange-500 to-rose-600 rounded-xl font-bold text-xs text-slate-50 hover:from-orange-400 hover:to-rose-500 transition shadow-lg shadow-rose-950/30">
+              🍳 임상 중재 기록 제출 (기록지 작성 완료)
+            </button>
+          </div>
+
+          <!-- Burger stack visually drawn using beautiful inline SVG/CSS shapes -->
+          <div class="relative w-full max-w-[240px] h-[200px] flex flex-col justify-end pb-1 overflow-visible">
+            <!-- Dynamic SVG burger layers stacked together -->
+            <div id="burger-visual-container" class="space-y-[-14px] flex flex-col-reverse justify-end items-center w-full">
+              <!-- Content populated via Javascript -->
+            </div>
+          </div>
+
+          <div class="w-full text-center text-[10px] text-slate-500 pt-2 border-t border-slate-900 flex justify-between">
+            <span>🍔 수행을 완수하면 패티가 누적됩니다</span>
+            <span id="stage-score-factor" class="text-rose-500 font-bold">1단계: 정답 시 +10점</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SCREEN 4: RESULTS & CERTIFICATE SCREEN -->
+    <div id="screen-result" class="screen w-full max-w-3xl glass-panel p-8 rounded-3xl text-center space-y-6 hidden animate-fade-in">
+      <div class="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-xl shadow-emerald-950/20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+
+      <div class="space-y-2">
+        <h2 class="text-3xl font-brand text-slate-100">임상 검증 전과정 이수 완료!</h2>
+        <p class="text-slate-400 text-sm">귀하는 5단계 오답 정밀 점검 복습까지 모두 성공적으로 완수하셨습니다.</p>
+      </div>
+
+      <div class="grid grid-cols-4 gap-2 bg-slate-950/80 p-4 rounded-2xl border border-slate-900 text-center">
+        <div>
+          <p class="text-[10px] text-slate-500">최종 획득 점수</p>
+          <span id="result-score" class="text-xl font-bold text-orange-400">--점</span>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500">종합 정답률</p>
+          <span id="result-accuracy" class="text-xl font-bold text-emerald-400">--%</span>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500">버거 완성수</p>
+          <span id="result-burgers" class="text-xl font-bold text-sky-400">--개</span>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-500">총 검정 시도</p>
+          <span id="result-attempts" class="text-xl font-bold text-rose-400">--회</span>
+        </div>
+      </div>
+
+      <!-- Live Canvas Preview Holder -->
+      <div class="space-y-3">
+        <div class="flex justify-between items-center px-1">
+          <p class="text-sm font-semibold text-slate-300">🎓 SOAP 메디컬 1급 라이선스 이수증 (실시간 미리보기)</p>
+          <span class="text-xs text-rose-400 font-bold">고화질 원본은 하단 버튼으로 다운로드하세요</span>
+        </div>
+        <div class="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950 max-w-[540px] mx-auto shadow-inner p-2">
+          <canvas id="cert-canvas" class="w-full h-auto rounded-xl border border-slate-850 bg-slate-900"></canvas>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center items-center max-w-[540px] mx-auto pt-2">
+          <button onclick="downloadCertificate()" class="w-full sm:w-1/2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl font-bold text-slate-50 text-sm flex items-center justify-center gap-2 hover:from-emerald-400 hover:to-teal-500 transition shadow-lg shadow-emerald-950/40">
+            📥 이미지 다운로드 (.PNG)
+          </button>
+          <button onclick="resetGame()" class="w-full sm:w-1/2 px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-slate-300 text-sm transition border border-slate-700">
+            🔄 메인 로비로 이동
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Interactive Instruction Modals (Alerts before Stages) -->
+  <div id="modal-stage-intro" class="fixed inset-0 bg-slate-950/80 flex items-center justify-center z-50 p-4 hidden">
+    <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-slate-800 space-y-4">
+      <div class="flex items-center gap-3">
+        <span id="modal-stage-emoji" class="text-4xl bg-rose-500/10 p-2 rounded-xl">📋</span>
+        <div>
+          <h3 id="modal-stage-title" class="text-xl font-bold font-brand text-slate-100">1단계 검정 안내</h3>
+          <p class="text-xs text-slate-400">진단적 단계 목표치 및 미션 프로토콜</p>
+        </div>
+      </div>
+      <p id="modal-stage-desc" class="text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-slate-900">
+        여기에 단계 안내 내용이 출력됩니다.
+      </p>
+      <button onclick="closeStageIntroModal()" class="w-full py-3 bg-gradient-to-r from-orange-500 to-rose-600 rounded-xl font-bold text-slate-50 hover:from-orange-400 hover:to-rose-500 transition">
+        임무 개시 및 카운트다운 시작
+      </button>
+    </div>
+  </div>
+
+  <!-- Strike / Stage Failure Restart Modal -->
+  <div id="modal-stage-fail" class="fixed inset-0 bg-rose-950/90 flex items-center justify-center z-50 p-4 hidden">
+    <div class="glass-panel max-w-md w-full p-6 rounded-2xl border-2 border-rose-500 space-y-4 text-center">
+      <span class="text-5xl inline-block animate-bounce">🚨</span>
+      <h3 class="text-2xl font-bold text-rose-500 font-brand">3회 오진 탈락 및 스테이지 리셋!</h3>
+      <p id="modal-fail-desc" class="text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-4 rounded-xl">
+        이번 단계에서 3번의 진단 거부(오답)가 발생하여 환자가 위급 상태에 빠졌습니다.<br>
+        임상 지식 안정을 위해 <b>해당 단계를 처음부터 다시 개시</b>합니다. 힘내세요!
+      </p>
+      <button onclick="restartFailedStage()" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-slate-50 rounded-xl font-bold transition">
+        재학습 개시
+      </button>
+    </div>
+  </div>
+
+  <!-- Pause/Resume Modal -->
+  <div id="modal-pause" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center z-50 p-4 hidden">
+    <div class="glass-panel max-w-md w-full p-8 rounded-3xl border border-slate-800 text-center space-y-6">
+      <div class="w-16 h-16 bg-orange-500/10 text-orange-400 rounded-full flex items-center justify-center mx-auto border border-orange-500/20">
+        <span class="text-3xl">⏸</span>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-2xl font-bold text-slate-100 font-brand">임상 훈련 일시 정지</h3>
+        <p class="text-xs text-slate-400">현재까지 수립한 진료 계획 상태가 브라우저에 임시 안전 저장되어 있습니다.</p>
+      </div>
+      <div class="bg-slate-900/60 p-4 rounded-xl text-left space-y-2 border border-slate-800">
+        <p class="text-xs text-slate-300 flex justify-between"><span>✓ 현재 단계</span> <span id="pause-status-stage" class="text-orange-400 font-bold">1단계</span></p>
+        <p class="text-xs text-slate-300 flex justify-between"><span>✓ 진행 문항</span> <span id="pause-status-question" class="text-orange-400 font-bold">01 / 10</span></p>
+        <p class="text-xs text-slate-300 flex justify-between"><span>✓ 누적 점수</span> <span id="pause-status-score" class="text-emerald-400 font-bold">0점</span></p>
+      </div>
+      <button onclick="resumeTriageGame()" class="w-full py-3.5 bg-gradient-to-r from-orange-500 to-rose-600 rounded-xl font-bold text-slate-50 hover:from-orange-400 hover:to-rose-500 transition shadow-lg">
+        임상 훈련 재개하기
+      </button>
+    </div>
+  </div>
+
+  <!-- Return to Main Menu Confirmation Modal -->
+  <div id="modal-confirm-main" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center z-50 p-4 hidden">
+    <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-slate-800 text-center space-y-4">
+      <div class="w-16 h-16 bg-rose-500/10 text-rose-400 rounded-full flex items-center justify-center mx-auto border border-rose-500/20">
+        <span class="text-3xl">🏠</span>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-xl font-bold text-slate-100 font-brand">메인 화면 복귀</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          현재 진행 상황이 저장되지 않을 수 있습니다.<br>
+          메인 화면으로 이동하시겠습니까?
+        </p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="confirmReturnToMain()" class="w-1/2 py-3 bg-rose-600 hover:bg-rose-500 text-slate-50 rounded-xl font-bold transition">
+          이동하기
+        </button>
+        <button onclick="closeReturnConfirm()" class="w-1/2 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition border border-slate-700">
+          돌아가기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Certificates Accumulator Modal -->
+  <div id="modal-cert-history" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center z-50 p-4 hidden">
+    <div class="glass-panel max-w-2xl w-full p-6 rounded-3xl border border-slate-800 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📁</span>
+          <h3 class="text-lg font-bold font-brand text-slate-100">이전 이수증 누적 보관함</h3>
+        </div>
+        <button onclick="closeCertHistoryModal()" class="text-slate-400 hover:text-slate-100 text-lg font-bold p-1">✕</button>
+      </div>
+      
+      <!-- Inner Scrollable List -->
+      <div id="cert-history-list" class="flex-grow overflow-y-auto py-4 space-y-4 pr-1">
+        <!-- Rendered dynamically in js -->
+      </div>
+
+      <div class="pt-4 border-t border-slate-800 flex justify-end">
+        <button onclick="closeCertHistoryModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Sandbox Canvas for Historical Cert Redraw PNG Downloader -->
+  <canvas id="hidden-cert-canvas" class="hidden"></canvas>
+
+  <!-- Floating Toast Notification System -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none flex flex-col gap-2 max-w-sm w-full px-4"></div>
+
+  <!-- Footer Info -->
+  <footer class="text-center py-6 text-xs text-slate-600 border-t border-slate-950 mt-4">
+    <p>© 2026 SOAP CHEF Clinical Decision Triage Simulator V5. All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    class SoundSynthesizer {
+      constructor() { this.ctx = null; }
+      init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      playSuccess() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(523.25, now); // C5
+        osc1.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(261.63, now); // C4
+        osc2.frequency.exponentialRampToValueAtTime(440, now + 0.15); // A4
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc1.connect(gain); osc2.connect(gain); gain.connect(this.ctx.destination);
+        osc1.start(now); osc2.start(now);
+        osc1.stop(now + 0.25); osc2.stop(now + 0.25);
+      }
+      playError() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.linearRampToValueAtTime(70, now + 0.25);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.25);
+      }
+      playAlarm() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.linearRampToValueAtTime(1200, now + 0.15);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.25);
+      }
+      playStageClear() {
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+          gain.gain.setValueAtTime(0.1, now + idx * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.3);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.1); osc.stop(now + idx * 0.1 + 0.3);
+        });
+      }
+    }
+    const sound = new SoundSynthesizer();
+
+    const scenarioDatabase = {
+      stage1: [
+        { id: "s1_q1", s: "손이 떨려요", o: "혈당 52 mg/dL", a: "저혈당", options: ["저혈당", "고혈당", "탈수", "감염"], p: "당분 공급", p_options: ["당분 공급", "수액", "항생제", "해열제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "혈당 감소로 인한 전형적 저혈당 상태이다. 즉각적인 당 보충이 필요하다." },
+        { id: "s1_q2", s: "머리가 아파요", o: "혈압 180/100 mmHg", a: "고혈압", options: ["고혈압", "저혈압", "탈수", "빈혈"], p: "혈압 조절제", p_options: ["혈압 조절제", "수액", "산소", "진통제"], defectCategory: "활력징후 측정값 무시", rationale: "혈압 상승 상태로 약물 조절이 필요하다." },
+        { id: "s1_q3", s: "어지러워요", o: "혈압 80/50 mmHg", a: "저혈압", options: ["저혈압", "고혈압", "심부전", "감염"], p: "수액 공급", p_options: ["수액 공급", "이뇨제", "항생제", "산소"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "혈압 저하로 순환 유지가 필요하다." },
+        { id: "s1_q4", s: "입이 너무 마라요", o: "피부 탄력 저하", a: "탈수", options: ["탈수", "체액과다", "신부전", "심부전"], p: "수액 공급", p_options: ["수액 공급", "이뇨제", "산소", "항생제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "체액 부족 상태이다." },
+        { id: "s1_q5", s: "숨이 차요", o: "폐부종 소견", a: "체액과다", options: ["체액과다", "탈수", "저혈압", "빈혈"], p: "이뇨제", p_options: ["이뇨제", "수액", "산소", "진통제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "체액 과잉으로 호흡 부담이 증가한다." },
+        { id: "s1_q6", s: "기침이 나요", o: "폐 침윤 소견", a: "폐렴", options: ["폐렴", "감염 없음", "천식", "탈수"], p: "항생제", p_options: ["항생제", "수액", "이뇨제", "혈압약"], defectCategory: "활력징후 측정값 무시", rationale: "폐 감염으로 항생제가 필요하다." },
+        { id: "s1_q7", s: "숨이 막혀요", o: "산소포화도 88%", a: "호흡곤란", options: ["호흡곤란", "고혈압", "탈수", "저혈당"], p: "산소 공급", p_options: ["산소 공급", "수액", "항생제", "혈압약"], defectCategory: "부적절한 진단 검사 해석", rationale: "산소 부족 상태이다." },
+        { id: "s1_q8", s: "숨을 못 쉬겠어요", o: "이산화탄소 상승", a: "급성 호흡부전", options: ["급성 호흡부전", "폐렴", "탈수", "빈혈"], p: "기계환기", p_options: ["기계환기", "수액", "항생제", "혈압약"], defectCategory: "부적절한 진단 검사 해석", rationale: "호흡 기능이 실패한 상태이다." },
+        { id: "s1_q9", s: "누우면 숨이 차요", o: "폐울혈", a: "심부전", options: ["심부전", "탈수", "저혈압", "빈혈"], p: "이뇨제", p_options: ["이뇨제", "수액", "산소", "항생제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "심장 기능 저하로 체액이 정체된다." },
+        { id: "s1_q10", s: "심장이 두근거려요", o: "심전도 불규칙", a: "부정맥", options: ["부정맥", "고혈압", "탈수", "감염"], p: "항부정맥제", p_options: ["항부정맥제", "수액", "항생제", "진통제"], defectCategory: "부적절한 진단 검사 해석", rationale: "심장 리듬 이상 상태이다." },
+         { id: "s1_q11", s: "가슴이 눌려요", o: "심전도 ST 변화", a: "흉통", options: ["흉통", "폐렴", "탈수", "감염"], p: "심장 평가", p_options: ["심장 평가", "항생제", "수액", "이뇨제"], defectCategory: "부적절한 진단 검사 해석", rationale: "심장성 흉통 의심 상태이다." },
+        { id: "s1_q12", s: "가슴이 쥐어짜요", o: "심근 효소 상승", a: "심근 허혈", options: ["심근 허혈", "폐렴", "탈수", "감염"], p: "혈류 개선 치료", p_options: ["혈류 개선 치료", "항생제", "수액", "산소"], defectCategory: "부적절한 진단 검사 해석", rationale: "심장 혈류 부족 상태이다." },
+        { id: "s1_q13", s: "말이 어눌해요", o: "편측 마비", a: "뇌졸중", options: ["뇌졸중", "발작", "탈수", "감염"], p: "뇌혈류 치료", p_options: ["뇌혈류 치료", "항생제", "수액", "이뇨제"], defectCategory: "임상적 특이 징후 간과", rationale: "뇌 혈관 장애 상태이다." },
+        { id: "s1_q14", s: "잠깐 말이 안 나왔어요", o: "증상 10분 후 회복", a: "일과성 허혈 발작", options: ["일과성 허혈 발작", "뇌졸중", "발작", "감염"], p: "혈관 평가", p_options: ["혈관 평가", "항생제", "수액", "이뇨제"], defectCategory: "임상적 특이 징후 간과", rationale: "일시적 뇌혈류 장애이다." },
+        { id: "s1_q15", s: "몸이 떨려요", o: "경련 발생", a: "발작", options: ["발작", "뇌졸중", "감염", "탈수"], p: "항경련제", p_options: ["항경련제", "수액", "항생제", "산소"], defectCategory: "부적절한 진단 검사 해석", rationale: "신경 과흥분 상태이다." },
+        { id: "s1_q16", s: "이상한 소리가 들려요", o: "혼돈 상태", a: "섬망", options: ["섬망", "치매", "감염", "탈수"], p: "원인 교정", p_options: ["원인 교정", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "급성 인지 장애 상태이다." },
+        { id: "s1_q17", s: "대답이 느려요", o: "GCS 감소", a: "의식 저하", options: ["의식 저하", "발작", "감염", "탈수"], p: "기도 확보", p_options: ["기도 확보", "항생제", "수액", "혈압약"], defectCategory: "활력징후 측정값 무시", rationale: "뇌 기능 저하 상태이다." },
+        { id: "s1_q18", s: "몸이 아파요", o: "발열 38.5도", a: "감염", options: ["감염", "탈수", "고혈압", "심부전"], p: "항생제", p_options: ["항생제", "수액", "이뇨제", "혈압약"], defectCategory: "활력징후 측정값 무시", rationale: "감염성 염증 상태이다." },
+        { id: "s1_q19", s: "너무 힘들어요", o: "저혈압 + 발열", a: "패혈증 의심", options: ["패혈증 의심", "감염", "탈수", "빈혈"], p: "수액+항생제", p_options: ["수액+항생제", "이뇨제", "혈압약", "산소"], defectCategory: "진단의 우선순위 혼동", rationale: "전신 감염 진행 상태이다." },
+        { id: "s1_q20", s: "소변이 줄었어요", o: "크레아티닌 상승", a: "급성 신손상", options: ["급성 신손상", "탈수", "감염", "심부전"], p: "수액 조절", p_options: ["수액 조절", "항생제", "이뇨제", "혈압약"], defectCategory: "부적절한 진단 검사 해석", rationale: "신장 기능 급격 저하 상태이다." },
+        { id: "s1_q21", s: "소변이 안 나와요", o: "방광 팽창", a: "요정체", options: ["요정체", "감염", "탈수", "신부전"], p: "도뇨관 삽입", p_options: ["도뇨관 삽입", "항생제", "수액", "이뇨제"], defectCategory: "임상적 특이 징후 간과", rationale: "배뇨 장애 상태이다." },
+        { id: "s1_q22", s: "갈증이 심해요", o: "혈당 300 mg/dL", a: "당뇨 조절 장애", options: ["당뇨 조절 장애", "저혈당", "탈수", "감염"], p: "인슐린 조절", p_options: ["인슐린 조절", "수액", "항생제", "이뇨제"], defectCategory: "부적절한 진단 검사 해석", rationale: "혈당 조절 실패 상태이다." },
+        { id: "s1_q23", s: "몸이 떨려요", o: "칼륨 이상", a: "전해질 불균형", options: ["전해질 불균형", "탈수", "감염", "심부전"], p: "전해질 교정", p_options: ["전해질 교정", "수액", "항생제", "이뇨제"], defectCategory: "부적절한 진단 검사 해석", rationale: "전해질 이상 상태이다." },
+        { id: "s1_q24", s: "피 토했어요", o: "혈색소 감소", a: "위장관 출혈 의심", options: ["위장관 출혈 의심", "감염", "탈수", "심부전"], p: "내시경", p_options: ["내시경", "항생제", "수액", "이뇨제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "위장 출혈 가능 상태이다." },
+        { id: "s1_q25", s: "너무 아파요", o: "통증 8점", a: "급성 통증", options: ["급성 통증", "만성 통증", "감염", "탈수"], p: "진통제", p_options: ["진통제", "항생제", "수액", "혈압약"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "급격한 통증 상태이다." },
+        { id: "s1_q26", s: "가슴이 조여요", o: "심전도 ST 변화", a: "심근 허혈 의심", options: ["심근 허혈 의심", "흉통", "감염", "탈수"], p: "심장 혈류 개선 치료", p_options: ["심장 혈류 개선 치료", "항생제", "수액", "이뇨제"], defectCategory: "부적절한 진단 검사 해석", rationale: "심장 혈류가 부족한 상태로 급성 심장 사건 가능성이 있다. 조기 혈류 개선 치료가 필요하다." },
+        { id: "s1_q27", s: "기침이 심해요", o: "폐 침윤 소견", a: "폐렴", options: ["폐렴", "호흡곤란", "감염 없음", "탈수"], p: "항생제", p_options: ["항생제", "수액", "이뇨제", "혈압약"], defectCategory: "임상적 특이 징후 간과", rationale: "폐 감염으로 인한 염증 상태이다. 항생제 치료가 필요하다." },
+        { id: "s1_q28", s: "숨이 막혀요", o: "산소포화도 89%", a: "호흡곤란", options: ["호흡곤란", "심부전", "감염", "탈수"], p: "산소 공급", p_options: ["산소 공급", "항생제", "이뇨제", "혈압약"], defectCategory: "부적절한 진단 검사 해석", rationale: "산소 부족으로 인한 호흡 기능 저하 상태이다. 산소 공급이 우선이다." },
+        { id: "s1_q29", s: "이상한 사람이 보여요", o: "시간·장소 혼돈", a: "섬망", options: ["섬망", "치매", "감염", "탈수"], p: "원인 교정", p_options: ["원인 교정", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "급성 의식 혼란 상태이다. 원인 교정이 핵심이다." },
+        { id: "s1_q30", s: "너무 아파요, NRS 9점입니다", o: "얼굴 찡그림 관찰됨", a: "급성 통증", options: ["급성 통증", "만성 통증", "감염", "탈수"], p: "진통제 투여", p_options: ["진통제 투여", "항생제 투여", "수액 공급", "혈압 조절"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "갑작스럽고 강한 통증으로 기능 제한이 동반된 상태이다. 즉각적인 통증 조절이 우선이다." },
+        { id: "s1_q31", s: "어지러워요, 몸에 힘이 없어요", o: "혈압 85/50, 맥박 118, 피부 창백, SpO₂ 95%", a: "활력징후 불안정", options: ["활력징후 불안정", "순환 저하", "탈수", "감염"], p: "수액 공급", p_options: ["수액 공급", "산소 공급", "항생제 투여", "진통제 투여"], defectCategory: "활력징후 측정값 무시", rationale: "혈압과 맥박 이상으로 활력징후가 불안정한 상태이다. 순환 안정화를 위한 수액 공급이 필요하다." },
+        { id: "s1_q32", s: "심장이 빨리 뛰어요, 불안해요", o: "맥박 128, 심전도 동성 빈맥, 혈압 110/70, SpO₂ 96%", a: "빈맥", options: ["빈맥", "저혈압", "순환 저하", "감염"], p: "원인 평가", p_options: ["원인 평가", "수액 공급", "항생제", "진통제"], defectCategory: "활력징후 측정값 무시", rationale: "심박수가 증가된 상태로 빈맥이다. 원인 감별 평가가 필요하다." },
+        { id: "s1_q33", s: "손발이 차요, 어지러워요", o: "모세혈관 재충전 지연, 피부 냉감, 혈압 88/55, 소변량 감소", a: "순환 저하", options: ["순환 저하", "활력징후 불안정", "탈수", "감염"], p: "수액 공급", p_options: ["수액 공급", "산소 공급", "항생제", "진통제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "말초 순환이 저하된 상태이다. 혈액순환 개선을 위한 수액이 필요하다." },
+        { id: "s1_q34", s: "계속 졸려요, 멍해요", o: "GCS 10점, 자극 반응 감소, 동공 반응 느림, 지남력 저하", a: "의식 저하", options: ["의식 저하", "섬망", "혼돈", "어지럼증"], p: "기도 유지", p_options: ["기도 유지", "수액 공급", "진통제", "산소 공급"], defectCategory: "진단의 우선순위 혼동", rationale: "의식 수준이 감소된 상태이다. 기도 유지가 우선이다." },
+        { id: "s1_q35", s: "여기가 어디예요?, 사람이 보인다", o: "시간/장소 지남력 저하, 환각, 불안정 행동, 주의력 저하", a: "섬망", options: ["섬망", "혼돈", "의식 저하", "어지럼증"], p: "안전 확보", p_options: ["안전 확보", "수액 공급", "산소 공급", "진통제"], defectCategory: "임상 안전 규칙 위반", rationale: "급성 혼돈 상태로 섬망이다. 환자 안전 확보가 최우선이다." },
+        { id: "s1_q36", s: "헷갈려요, 이상해요", o: "지남력 저하, 부적절한 대답, 집중력 저하, 행동 불안정", a: "혼돈", options: ["혼돈", "섬망", "의식 저하", "보행 불안정"], p: "환경 안정", p_options: ["환경 안정", "산소 공급", "수액 공급", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "인지 기능이 혼란된 상태이다. 안정된 환경 제공이 필요하다." },
+        { id: "s1_q37", s: "빙빙 돌아요, 일어날 때 어지러워요", o: "기립 시 혈압 변화, 안진 없음, 보행 불안정 경미, 활력징후 정상", a: "어지럼증", options: ["어지럼증", "순환 저하", "빈맥", "탈수"], p: "안정 유지", p_options: ["안정 유지", "수액 공급", "항생제", "진통제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "평형 장애로 인한 어지럼증이다. 안정 유지가 필요하다." },
+        { id: "s1_q38", s: "잘 못 걸어요, 휘청거려요", o: "보행 시 균형 저하, 근력 4/5, 낙상 위험 증가, 반사 정상", a: "보행 불안정", options: ["보행 불안정", "어지럼증", "순환 저하", "감염"], p: "낙상 예방", p_options: ["낙상 예방", "수액 공급", "항생제", "산소 공급"], defectCategory: "임상 안전 규칙 위반", rationale: "보행 안정성이 저하된 상태이다. 낙상 예방이 필요하다." },
+        { id: "s1_q39", s: "몸이 붓는 것 같아요, 목이 마르거나 답답해요", o: "부종, 체중 증가, 전해질 이상, 소변량 변화", a: "체액 불균형", options: ["체액 불균형", "탈수", "순환 저하", "감염"], p: "체액 조절", p_options: ["체액 조절", "수액 공급", "산소 공급", "항생제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "체액 균형이 깨진 상태이다. 체액 조절이 필요하다." },
+        { id: "s1_q40", s: "숨이 차요, 산소 없으면 힘들어요", o: "산소 2L → 5L 증가, SpO₂ 92%, 호흡수 증가, 보조근 사용", a: "산소 요구량 증가", options: ["산소 요구량 증가", "호흡곤란", "순환 저하", "감염"], p: "산소 증량", p_options: ["산소 증량", "수액 공급", "항생제", "진통제"], defectCategory: "활력징후 측정값 무시", rationale: "산소 요구량이 증가한 상태이다. 산소 공급 증가가 필요하다." }
+      ],
+      stage2InternalMedicine: [
+        { id: "s2_im1", s: "손이 떨려요, 식은땀이 나요, 너무 배고파요", o: "혈당 52 mg/dL, HR 118, 피부 냉습, 의식 명료", a: "저혈당", options: ["저혈당", "고혈압", "저혈압", "탈수"], p: "당분 공급", p_options: ["당분 공급", "혈압 모니터링", "수액 공급", "항생제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "혈당 저하로 저혈당 상태이다. 즉각적인 당분 공급이 필요하다." },
+        { id: "s2_im2", s: "머리가 계속 아파요, 눈이 흐려요, 몸이 무거워요", o: "BP 172/104 mmHg, 168/102 mmHg, 안저 혈관 협착", a: "고혈압", options: ["고혈압", "저혈당", "저혈압", "탈수"], p: "혈압 모니터링", p_options: ["혈압 모니터링", "당분 공급", "수액 공급", "항생제"], defectCategory: "활력징후 측정값 무시", rationale: "반복 측정에서 고혈압이다. 혈압 모니터링이 필요하다." },
+        { id: "s2_im3", s: "입이 너무 말라요, 어지러워요, 소변이 줄었어요", o: "Na 151 mEq/L, BUN 상승, UO 감소, 피부탄력 저하", a: "탈수", options: ["탈수", "저혈당", "고혈압", "저혈압"], p: "수액 공급", p_options: ["수액 공급", "당분 공급", "혈압 모니터링", "항생제"], defectCategory: "주관적-객관적 지표 불일치 오류", rationale: "전해질 이상과 소변량 감소가 있다. 체액 보충이 필요하다." },
+        { id: "s2_im4", s: "기침이 심해요, 열이 나요, 가래가 많아요", o: "BT 38.9℃, WBC 17,000, CRP 상승, CXR 폐침윤", a: "폐렴", options: ["폐렴", "감염", "호흡곤란", "급성 호흡부전"], p: "항생제", p_options: ["항생제", "산소 공급", "수액 공급", "기관삽관"], defectCategory: "복합적 임상 상관관계 무시", rationale: "CXR에서 폐침윤이 있다. 항생제 치료가 필요하다." },
+        { id: "s2_im5", s: "가슴이 쥐어짜요, 숨이 막혀요, 식은땀이 나요", o: "Troponin 상승, ST depression, HR 112", a: "심근허혈 의심", options: ["심근허혈 의심", "흉통", "부정맥", "불안"], p: "심전도 모니터링", p_options: ["심전도 모니터링", "산소 공급", "혈압 모니터링", "심리안정"], defectCategory: "부적절한 진단 검사 해석", rationale: "심근효소 상승이 있다. 심전도 모니터링이 필요하다." },
+        { id: "s2_im6", s: "숨이 차요, 누우면 힘들어요, 다리가 붓고 있어요", o: "BNP 상승, CXR 폐울혈, SpO2 92%, 하지부종", a: "심부전", options: ["심부전", "체액과다", "호흡곤란", "급성 호흡부전"], p: "이뇨제", p_options: ["이뇨제", "산소 공급", "수액 공급", "혈압 모니터링"], defectCategory: "복합적 임상 상관관계 무시", rationale: "BNP 상승과 폐울혈이 있다. 이뇨제 투여가 필요하다." },
+        { id: "s2_im7", s: "심장이 빨리 뛰어요, 어지러워요, 불안해요", o: "ECG atrial fibrillation, HR 150, 불규칙 리듬", a: "부정맥", options: ["부정맥", "공황 반응", "불안", "흉통"], p: "심전도 모니터링", p_options: ["심전도 모니터링", "심리안정", "혈압 모니터링", "산소 공급"], defectCategory: "부적절한 진단 검사 해석", rationale: "심방세동 리듬이다. 심전도 모니터링이 필요하다." },
+        { id: "s2_im8", s: "숨이 너무 차요, 말하기 힘들어요, 청색증 있어요", o: "SpO2 83%, RR 38, ABGA 저산소증, 청색증", a: "급성 호흡부전", options: ["급성 호흡부전", "심내막염", "폐렴", "심부전"], p: "기관삽관", p_options: ["기관삽관", "산소 공급", "항생제", "이뇨제"], defectCategory: "진단의 우선순위 혼동", rationale: "산소포화도 저하가 심하다. 기도 확보가 필요하다." },
+        { id: "s2_im9", s: "가슴 답답해요, 불안해요, 숨 막혀요", o: "ECG 정상, HR 124, Troponin 정상", a: "흉통", options: ["흉통", "폐렴", "탈수", "부정맥"], p: "심리안정", p_options: ["심리안정", "수액공급", "항생제", "산소 공급"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "심장효소 정상이다. 심인성 흉통 가능성이 높다." },
+        { id: "s2_im10", s: "약 먹고 어지러워요, 힘이 빠져요, 쓰러질 뻔했어요", o: "BP 78/48 mmHg, HR 110, 신규 항고혈압제 복용", a: "약물부작용", options: ["약물부작용", "저혈압", "신손상 위험", "불안"], p: "약물조정", p_options: ["약물조정", "수액 공급", "혈압 모니터링", "심리안정"], defectCategory: "활력징후 측정값 무시", rationale: "약물 투여 후 저혈압 발생이다. 약물 조정이 필요하다." },
+        { id: "s2_im11", s: "검은 변이 나와요, 어지러워요, 기운이 없어요", o: "Hb 8.2 g/dL, FOBT 양성, BP 100/60 mmHg, HR 108", a: "위장관 출혈 의심", options: ["위장관 출혈 의심", "저혈당", "저혈압", "감염"], p: "출혈 관찰", p_options: ["출혈 관찰", "당분 공급", "수액 공급", "항생제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "Hb 감소와 FOBT 양성이다. 위장관 출혈 관찰이 필요하다." },
+        { id: "s2_im12", s: "숨이 계속 차요, 밤에 2번 깨요, 다리가 붓고 있어요", o: "BNP 820 pg/mL, CXR 폐울혈, SpO2 91%, 하지부종 +2", a: "심부전", options: ["심부전", "체액과다", "호흡곤란", "폐렴"], p: "이뇨제", p_options: ["이뇨제", "산소 공급", "수액 공급", "항생제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "BNP 상승과 폐울혈이다. 심부전으로 이뇨제가 필요하다." },
+        { id: "s2_im13", s: "다리에 힘이 없어요, 쥐가 나요, 심장이 두근거려요", o: "K 3.1 mEq/L, ECG U wave, 근력저하, HR 102", a: "저칼륨혈증", options: ["저칼륨혈증", "전해질불균형", "고칼륨혈증", "신손상 위험"], p: "전해질 교정", p_options: ["전해질 교정", "ECG 모니터링", "수액 공급", "산소 공급"], defectCategory: "부적절한 진단 검사 해석", rationale: "ECG에서 U wave이다. 저칼륨혈증 교정이 필요하다." },
+        { id: "s2_im14", s: "열이 나요, 기침해요, 몸살이 있어요", o: "BT 38.5℃, WBC 15,500, CRP 상승, CXR 폐침윤", a: "감염", options: ["감염", "폐렴", "호흡곤란", "탈수"], p: "항생제", p_options: ["항생제", "산소 공급", "수액 공급", "혈압 모니터링"], defectCategory: "진단의 우선순위 혼동", rationale: "염증 수치 상승이다. 감염으로 항생제 필요하다." },
+        { id: "s2_im15", s: "가슴이 조여요, 숨이 막혀요, 식은땀이 나요", o: "Troponin I 상승, ST depression, HR 110, ECG 이상", a: "심근허혈 의심", options: ["심근허혈 의심", "흉통", "부정맥", "불안"], p: "심전도 모니터링", p_options: ["심전도 모니터링", "산소 공급", "혈압 모니터링", "심리안정"], defectCategory: "부적절한 진단 검사 해석", rationale: "심근효소 상승이다. 심근허혈 의심으로 모니터링 필요하다." },
+        { id: "s2_im16", s: "숨이 차요, 누우면 더 힘들어요, 기침이 있어요", o: "CXR 폐울혈, BNP 상승, SpO2 93%, RR 24", a: "심부전", options: ["심부전", "호흡곤란", "체액과다", "폐렴"], p: "이뇨제", p_options: ["이뇨제", "산소 공급", "수액 공급", "항생제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "폐울혈 소견이다. 심부전으로 이뇨제 필요하다." },
+        { id: "s2_im17", s: "심장이 불규칙하게 뛰어요, 어지러워요, 피곤해요", o: "ECG atrial fibrillation, HR 148 irregular, BP 120/80", a: "부정맥", options: ["부정맥", "공황 반응", "불안", "흉통"], p: "심전도 모니터링", p_options: ["심전도 모니터링", "심리안정", "혈압 모니터링", "산소 공급"], defectCategory: "부적절한 진단 검사 해석", rationale: "심방세동이다. 심전도 모니터링이 필요하다." },
+        { id: "s2_im18", s: "숨이 너무 차요, 말이 잘 안 나와요, 청색증 있어요", o: "SpO2 82%, PaO2 55 mmHg, RR 36, 청색증", a: "급성 호흡부전", options: ["급성 호흡부전", "심내막염", "폐렴", "심부전"], p: "기관삽관", p_options: ["기관삽관", "산소 공급", "항생제", "이뇨제"], defectCategory: "진단의 우선순위 혼동", rationale: "산소포화도 저하이다. 기도 확보가 필요하다." },
+        { id: "s2_im19", s: "가슴이 답답해요, 불안해요, 숨이 막혀요", o: "ECG 정상, HR 118, Troponin 정상, BP 정상", a: "흉통", options: ["흉통", "폐렴", "탈수", "부정맥"], p: "심리안정", p_options: ["심리안정", "수액공급", "항생제", "산소 공급"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "심장 효소 정상이다. 심인성 흉통이다." },
+        { id: "s2_im20", s: "약 먹고 어지러워요, 힘이 빠져요, 눈앞이 깜깜해요", o: "BP 82/50 mmHg, HR 112, 신규 항고혈압제 시작", a: "약물부작용", options: ["약물부작용", "저혈압", "신손상 위험", "불안"], p: "약물조정", p_options: ["약물조정", "수액 공급", "혈압 모니터링", "심리안정"], defectCategory: "활력징후 측정값 무시", rationale: "약물 투여 후 저혈압이다. 약물 조정이 필요하다." },
+        { id: "s2_im21", s: "소변이 줄었어요, 피곤해요, 부종이 있어요", o: "Cr 2.1 mg/dL, BUN 상승, UO 300mL/24h, 부종 +2", a: "급성 신손상 위험", options: ["급성 신손상 위험", "전해질불균형", "체액과다", "탈수"], p: "수액 공급", p_options: ["수액 공급", "전해질 교정", "이뇨제", "모니터링"], defectCategory: "복합적 임상 상관관계 무시", rationale: "소변량 감소이다. 신장 관류 유지가 필요하다." },
+        { id: "s2_im22", s: "소화가 안 돼요, 복통 있어요, 식욕이 없어요", o: "복부 CT 정상, AST/ALT 정상, 장음 감소, 복부 팽만", a: "위장관 장애", options: ["위장관 장애", "출혈 의심", "감염", "탈수"], p: "위장관 관리", p_options: ["위장관 관리", "출혈 관찰", "항생제", "수액"], defectCategory: "복합적 임상 상관관계 무시", rationale: "구조적 이상 없다. 기능성 위장관 장애이다." },
+        { id: "s2_im23", s: "가슴이 아파요, 숨이 차요, 식은땀이 나요", o: "CK-MB 상승, ST elevation, Troponin 상승, HR 120", a: "심근허혈 의심", options: ["심근허혈 의심", "흉통", "부정맥", "급성 호흡부전"], p: "심전도 모니터링", p_options: ["심전도 모니터링", "산소 공급", "혈압 모니터링", "심리안정"], defectCategory: "부적절한 진단 검사 해석", rationale: "심근효소 상승이다. 급성 관상동맥 증후군 의심이다." },
+        { id: "s2_im24", s: "몸이 불안해요, 잠을 못 자요, 심장이 두근거려요", o: "HR 110, cortisol 상승, EEG 정상, 활력징후 안정", a: "불안", options: ["불안", "공황 반응", "부정맥", "흉통"], p: "심리안정", p_options: ["심리안정", "모니터링", "혈압 모니터링", "산소"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "생리적 이상 없다. 불안 반응이다." },
+        { id: "s2_im25", s: "갑자기 숨이 막혀요, 가슴이 아파요, 불안해요", o: "D-dimer 상승, CT pulmonary embolism 의심, SpO2 88%", a: "호흡곤란", options: ["호흡곤란", "신부전", "폐렴", "심부전"], p: "산소 공급", p_options: ["산소 공급", "수액 공급", "항생제", "이뇨제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "저산소증이다. 산소 공급이 필요하다." },
+        { id: "s2_im26", s: "피로해요, 식욕 없어요, 메스꺼워요", o: "AST 120, ALT 135, bilirubin 상승, 간비대", a: "간기능 이상", options: ["간기능 이상", "감염", "위장관 장애", "탈수"], p: "간기능 관리", p_options: ["간기능 관리", "항생제", "위장관 관리", "수액"], defectCategory: "복합적 임상 상관관계 무시", rationale: "간수치 상승이다. 간기능 관리가 필요하다." },
+        { id: "s2_im27", s: "가슴이 답답해요, 숨이 차요, 불안해요", o: "BNP 900, CXR 심비대, SpO2 90%, 하지부종 +2", a: "심부전", options: ["심부전", "체액과다", "호흡곤란", "폐렴"], p: "이뇨제", p_options: ["이뇨제", "산소 공급", "수액 공급", "항생제"], defectCategory: "복합적 임상 상관관계 무시", rationale: "심부전 소견이다. 이뇨제가 필요하다." },
+        { id: "s2_im28", s: "두근거려요, 어지러워요, 숨이 차요", o: "ECG ventricular ectopy, HR 130, BP 110/70", a: "부정맥", options: ["부정맥", "불안", "흉통", "공황 반응"], p: "심전도 모니터링", p_options: ["심전도 모니터링", "심리안정", "혈압 모니터링", "산소"], defectCategory: "부적절한 진단 검사 해석", rationale: "심실성 조기수축이다. 부정맥 모니터링 필요하다." },
+        { id: "s2_im29", s: "몸이 축 처져요, 피곤해요, 어지러워요", o: "Hb 10.2, SpO2 96%, BP 120/80, ECG 정상", a: "영양불균형", options: ["영양불균형", "감염", "탈수", "불안"], p: "영양관리", p_options: ["영양관리", "항생제", "수액 공급", "심리안정"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "영양 상태 저하이다. 영양 공급이 필요하다." },
+        { id: "s2_im30", s: "불안해요, 숨이 막혀요, 심장이 뛰어요", o: "HR 122, cortisol 상승, ECG 정상, SpO2 98%", a: "공황 반응", options: ["공황 반응", "저혈압", "흉통", "부정맥"], p: "심리안정", p_options: ["심리안정", "모니터링", "혈압 모니터링", "산소 공급"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "신체검사 정상이다. 공황 반응이다." }
+      ],
+      stage2Orthopedics: [
+        { id: "s2_os1", s: "수술 부위가 너무 아파요, 움직일 때 더 아파요, 진통제 주세요, 통증이 8점 정도예요", o: "수술부위 압통, 안면 찡그림, HR 110, 움직임 제한", a: "급성 통증", options: ["급성 통증", "감염 위험", "낙상 위험", "관절 강직"], p: "진통제 투여", p_options: ["진통제 투여", "항생제", "보행훈련", "냉찜질"], defectCategory: "임상 안전 규칙 위반", rationale: "수술 직후 급성으로 발생한 강한 통증 양상이다. 통증 점수와 행동 변화가 함께 나타나 즉각적 진통 처치가 필요하다." },
+        { id: "s2_os2", s: "무릎이 항상 아파요, 계속 뻐근해요, 오래 걸으면 심해져요", o: "X-ray 퇴행성 변화, ROM 감소, 보행 시 통증, NRS 5", a: "만성 통증", options: ["만성 통증", "급성 통증", "근력 저하", "낙상 위험"], p: "물리치료", p_options: ["물리치료", "진통제", "수액", "항생제"], defectCategory: "임상적 특이 징후 간과", rationale: "장기간 지속된 통증과 퇴행성 변화가 특징이다. 비약물적 재활치료가 중요하다." },
+        { id: "s2_os3", s: "혼자 못 걸어요, 다리가 힘이 없어요, 일어나기 힘들어요", o: "MMT 2/5, 보행 불가, 침상 안정, 균형 저하", a: "신체기동성 장애", options: ["신체기동성 장애", "낙상 위험", "부종", "감염 위험"], p: "보행 보조", p_options: ["보행 보조", "항생제", "수액", "산소요법"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "근력 저하로 독립적인 이동이 어렵다. 보조기구 및 이동 보조가 필요하다." },
+        { id: "s2_os4", s: "어지러워요, 혼자 서면 불안해요, 넘어질 것 같아요", o: "TUG test 지연, 보행 불안정, 저혈압 90/60, 균형 장애", a: "낙상 위험", options: ["낙상 위험", "급성 통증", "감염 위험", "부종"], p: "낙상 예방교육", p_options: ["낙상 예방교육", "항생제", "진통제", "수액"], defectCategory: "임상 안전 규칙 위반", rationale: "균형 저하와 어지럼증으로 낙상 위험이 높다. 환경 조정과 예방 교육이 필요하다." },
+        { id: "s2_os5", s: "상처가 빨갛고 열나요, 고름이 나와요, 아파요", o: "WBC 14,000, 발적, 삼출물, 체온 38.2℃", a: "감염 위험", options: ["감염 위험", "출혈 위험", "부종", "골절"], p: "항생제", p_options: ["항생제", "수액", "냉찜질", "보행훈련"], defectCategory: "임상 안전 규칙 위반", rationale: "감염 징후와 염증 수치 상승이 있다. 항생제 투여가 필요하다." },
+        { id: "s2_os6", s: "발이 저려요, 감각이 둔해요, 차가운 느낌이에요", o: "모세혈관 재충만 4초, 피부 창백, 맥박 약함, 냉감", a: "신경혈관 손상 위험", options: ["신경혈관 손상 위험", "부종", "감염", "낙상 위험"], p: "혈류 평가", p_options: ["혈류 평가", "항생제", "진통제", "수액"], defectCategory: "임상적 특이 징후 간과", rationale: "혈류 감소와 감각 이상이 동반된다. 신경혈관 상태 지속 관찰이 필요하다." },
+        { id: "s2_os7", s: "다리가 붓고 무거워요, 신발이 안 맞아요, 눌리면 아파요", o: "요흔부종 +2, 체중 증가, 하지 둘레 증가, 피부 긴장", a: "말초순환 장애", options: ["말초순환 장애", "감염 위험", "골절", "근력 저하"], p: "하지 거상", p_options: ["하지 거상", "항생제", "진통제", "보행훈련"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "순환 저하로 부종과 무거움이 발생한다. 하지 거상으로 순환을 개선한다." },
+        { id: "s2_os8", s: "얼굴이 붓는 느낌, 손이 꽉 끼어요, 아침에 심해요", o: "요흔부종 +3, 체중 2kg 증가, 안와 부종, 혈압 상승", a: "부종", options: ["부종", "감염", "출혈", "낙상 위험"], p: "염분 제한", p_options: ["염분 제한", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "전신 체액 저류로 부종이 발생한다. 염분 제한이 핵심 관리이다." },
+        { id: "s2_os9", s: "피가 계속 나요, 어지러워요, 힘이 없어요", o: "Hb 9.0, 혈압 85/55, 창백, 출혈 지속", a: "출혈 위험", options: ["출혈 위험", "감염", "낙상", "부종"], p: "지혈", p_options: ["지혈", "항생제", "수액", "진통제"], defectCategory: "임상 안전 규칙 위반", rationale: "활력징후 저하와 출혈 소견이 있다. 즉각적인 지혈이 필요하다." },
+        { id: "s2_os10", s: "넘어졌어요, 다리가 심하게 아파요, 움직일 수 없어요", o: "X-ray 골절, 부종, 변형, 운동 제한", a: "골절 관련 손상", options: ["골절 관련 손상", "낙상 위험", "감염", "부종"], p: "고정", p_options: ["고정", "항생제", "수액", "보행훈련"], defectCategory: "임상적 특이 징후 간과", rationale: "영상에서 골절이 확인된다. 고정 및 안정이 필요하다." },
+        { id: "s2_os11", s: "팔이 잘 안 움직여요, 굽히기 힘들어요, 뻣뻣해요", o: "ROM 감소, 관절 경직, 근육 긴장, 통증", a: "관절 운동 제한", options: ["관절 운동 제한", "근력 저하", "감염", "부종"], p: "운동치료", p_options: ["운동치료", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "관절 움직임 범위가 제한된다. 관절 가동 운동이 필요하다." },
+        { id: "s2_os12", s: "잘 못 걸어요, 휘청거려요, 다리가 불안정해요", o: "보행 보조 필요, 균형 저하, 근력 3/5, 낙상력 증가", a: "보행 장애", options: ["보행 장애", "낙상 위험", "부종", "감염"], p: "보행훈련", p_options: ["보행훈련", "항생제", "수액", "진통제"], defectCategory: "임상 안전 규칙 위반", rationale: "보행 기능 저하가 명확하다. 보행 훈련이 필요하다." },
+        { id: "s2_os13", s: "힘이 없어요, 금방 피곤해요, 움직이기 힘들어요", o: "근력 2/5, 활동 시 HR 130, SpO2 감소, 피로 호소", a: "근력 저하", options: ["근력 저하", "활동 내성 저하", "낙상", "감염"], p: "휴식", p_options: ["휴식", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "근력 자체가 감소되어 있다. 에너지 보존과 휴식이 중요하다." },
+        { id: "s2_os14", s: "깁스가 너무 답답해요, 눌리는 느낌이에요, 저려요", o: "석고 적용, 피부 압박, 말초냉감, 부종", a: "석고/보조기 문제", options: ["석고/보조기 문제", "감염", "낙상", "출혈"], p: "석고 확인", p_options: ["석고 확인", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "석고로 인한 압박 증상이 있다. 석고 상태 점검이 필요하다." },
+        { id: "s2_os15", s: "수술 후 너무 피곤해요, 회복이 느려요, 기운이 없어요", o: "상처 치유 지연, 저단백혈증, 피로, 활동 감소", a: "수술 후 회복 지연 위험", options: ["수술 후 회복 지연 위험", "감염", "부종", "통증"], p: "영양공급", p_options: ["영양공급", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "회복 속도가 지연되는 상태이다. 영양 및 회복 지원이 필요하다." },
+        { id: "s2_os16", s: "상처가 잘 안 아물어요, 피부가 벗겨져요, 아파요", o: "피구 결손, 발적, 삼출물, 조직 손상", a: "피부 통합성 장애", options: ["피부 통합성 장애", "감염", "부종", "골절"], p: "드레싱", p_options: ["드레싱", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "피부 구조 손상이 존재한다. 상처 드레싱이 필요하다." },
+        { id: "s2_os17", s: "오래 누워 있어요, 피부가 걱정돼요, 눌리면 아파요", o: "발적 없음 현재, 압박 부위, Braden 14점, 침상 안정", a: "피부 통합성 장애 위험", options: ["피부 통합성 장애 위험", "감염", "낙상", "부종"], p: "체위변경", p_options: ["체위변경", "항생제", "수액", "진통제"], defectCategory: "임상 안전 규칙 위반", rationale: "욕창 발생 위험 상태이다. 체위 변경이 중요하다." },
+        { id: "s2_os18", s: "숨이 차요, 다리가 아파요, 답답해요", o: "D-dimer 상승, 하지 통증, 부종, 빈호흡", a: "DVT 위험", options: ["DVT 위험", "감염", "낙상", "부종"], p: "항응고제", p_options: ["항응고제", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "혈전 가능성을 시사하는 소견이다. 항응고 치료가 필요하다." },
+        { id: "s2_os19", s: "몸이 한쪽으로 기울어요, 자세가 불편해요, 앉기 힘들어요", o: "체간 불균형, 근력 저하, 균형 장애, 보행 불안정", a: "자세 불균형", options: ["자세 불균형", "낙상", "감염", "부종"], p: "자세 교정", p_options: ["자세 교정", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "체간 정렬이 불안정하다. 자세 교정이 필요하다." },
+        { id: "s2_os20", s: "조금만 움직여도 숨차요, 금방 지쳐요, 활동 못하겠어요", o: "SpO2 92%, HR 120, 활동 시 호흡곤란, 피로", a: "활동 내성 저하", options: ["활동 내성 저하", "감염", "낙상", "부종"], p: "활동 제한", p_options: ["활동 제한", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "활동 시 생리적 반응이 과도하다. 활동 조절이 필요하다." },
+        { id: "s2_os21", s: "혼자 씻기 힘들어요, 옷 입기 어려워요, 식사도 힘들어요", o: "ADL 점수 저하, 근력 저하, 도움 필요, 기능 감소", a: "자기돌봄 결핍", options: ["자기돌봄 결핍", "낙상", "부종", "감염"], p: "일상생활 보조", p_options: ["일상생활 보조", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "기본 생활 수행 능력이 저하되었다. 자기돌봄 지원이 필요하다." },
+        { id: "s2_os22", s: "발이 차요, 색이 이상해요, 저려요", o: "피부 창백, 냉감, 모세혈관 재충만 지연, 맥박 약함", a: "비효율적 말초조직 관류", options: ["비효율적 말초조직 관류", "감염", "낙상", "부종"], p: "혈류 개선", p_options: ["혈류 개선", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "조직으로의 혈류가 부족하다. 순환 개선이 필요하다." },
+        { id: "s2_os23", s: "교통사고 이후 너무 아파요, 움직일 수 없어요, 출혈 있어요", o: "외상 병력, 출혈, 골절 의심, 활력징후 불안정", a: "급성 외상 후 상태", options: ["급성 외상 후 상태", "감염", "부종", "낙상"], p: "응급처치", p_options: ["응급처치", "항생제", "수액", "산소공급"], defectCategory: "임상 안전 규칙 위반", rationale: "급성 외상 상황이다. 즉각적인 응급 대응이 필요하다." },
+        { id: "s2_os24", s: "다리가 자꾸 틀어져요, 맞지 않는 느낌이에요, 아파요", o: "X-ray 정렬 불량, 부종, 변형, 움직임 시 통증", a: "골절 정렬 유지 문제", options: ["골절 정렬 유지 문제", "감염", "낙상", "부종"], p: "재정렬", p_options: ["재정렬", "항생제", "수액", "재활치료"], defectCategory: "임상적 특이 징후 간과", rationale: "골절 정렬이 유지되지 않는다. 재정렬 및 고정이 필요하다." },
+        { id: "s2_os25", s: "허리가 눌려요, 다리가 저려요, 감각이 이상해요", o: "감각 저하, 압박 부위 통증, 운동 제한, 부종 없음", a: "신경 압박 위험", options: ["신경 압박 위험", "감염", "낙상", "부종"], p: "압박 완화", p_options: ["압박 완화", "항생제", "수액", "지혈"], defectCategory: "임상적 특이 징후 간과", rationale: "신경 압박 증상이 의심된다. 압박 해소가 필요하다." },
+        { id: "s2_os26", s: "관절이 잘 안 펴져요, 굳은 느낌이에요, 아파요", o: "ROM 감소, 섬유화 소견, 운동 제한, 경직", a: "관절 강직", options: ["관절 강직", "감염", "부종", "낙상"], p: "운동치료", p_options: ["운동치료", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "관절이 굳어 움직임이 제한된다. 지속적인 운동 치료가 필요하다." },
+        { id: "s2_os27", s: "수술 부위가 뜨거워요, 고름이 나와요, 아파요", o: "발열 38.5℃, WBC 상승, 발적, 삼출물", a: "수술 후 감염 의심", options: ["수술 후 감염 의심", "출혈", "부종", "낙상"], p: "항생제", p_options: ["항생제", "지혈", "수액", "진통제"], defectCategory: "임상 안전 규칙 위반", rationale: "수술 부위 감염 징후가 명확하다. 항생제 치료가 필요하다." },
+        { id: "s2_os28", s: "피가 계속 비쳐요, 어지러워요, 힘이 없어요", o: "Hb 감소, 혈압 저하, 상처 출혈 지속, 창백", a: "출혈 가능성", options: ["출혈 가능성", "감염", "낙상", "부종"], p: "지혈", p_options: ["지혈", "항생제", "수액", "진통제"], defectCategory: "임상 안전 규칙 위반", rationale: "지속적인 출혈 위험 상태이다. 지혈 및 안정이 필요하다." },
+        { id: "s2_os29", s: "재활이 잘 안돼요, 회복이 느려요, 움직이기 힘들어요", o: "근력 저하, ROM 감소, 피로, 기능 저하", a: "재활 지연 위험", options: ["재활 지연 위험", "감염", "부종", "낙상"], p: "재활치료", p_options: ["재활치료", "항생제", "수액", "진통제"], defectCategory: "임상적 특이 징후 간과", rationale: "기능 회복 속도가 느리다. 지속적인 재활 치료가 필요하다." },
+        { id: "s3_os30", s: "혼자 못 움직여요, 침대에서 일어나기 힘들어요, 다리가 안 움직여요", o: "MMT 1/5, 침상 안정, 보행 불가, 균형 저하", a: "이동 제한 상태", options: ["이동 제한 상태", "낙상", "감염", "부종"], p: "이동 보조", p_options: ["이동 보조", "항생제", "수액", "진통제"], defectCategory: "투약 및 물품 유실 관리 불이행", rationale: "이동 기능이 거의 소실된 상태이다. 전면적인 이동 보조가 필요하다." }
+      ],
+      stage3InternalMedicine: [
+        { id: "s3_im1", s: "말이 느려요, 오른쪽 힘이 빠져요, 갑자기 멍해졌어요, 통증 2점이에요", o: "혈압 170/100, CT 초기 변화 없음, 신경학적 결손 간헐적", a: "뇌졸중 (CVA)", options: ["뇌졸중 (CVA)", "일과성 허혈 발작", "편두통", "저혈당"], p: "혈전용해 치료 평가", p_options: ["혈전용해 치료 평가", "진통제 투여", "수액 공급", "항생제 투여"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "지속되는 신경학적 결손으로 뇌경색 가능성이 높다. 급성 혈관 재개통 평가가 필요하다." },
+        { id: "s3_im2", s: "잠깐 말이 안 나왔어요, 금방 좋아졌어요, 어지러워요, 통증 없음", o: "CT 정상, 신경결손 1시간 내 회복, 혈압 상승", a: "일과성 허혈 발작", options: ["일과성 허혈 발작", "뇌졸중", "실신", "발작 장애"], p: "항혈소판제 투여", p_options: ["항혈소판제 투여", "혈전용해 치료", "수액 공급", "항경련제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "일시적 뇌허혈로 증상이 완전 회복된다. 재발 예방 치료가 중요하다." },
+        { id: "s3_im3", s: "몸이 떨려요, 잠깐 의식이 없었어요, 머리가 아파요 3점", o: "EEG 이상 의심, 회복 후 혼미, 근육 경련 관찰", a: "발작 장애", options: ["발작 장애", "실신", "편두통", "뇌염"], p: "항경련제 투여", p_options: ["항경련제 투여", "혈전용해 치료", "수액 공급", "항생제 투여"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "경련과 의식 변화가 반복된다. 항경련제 치료가 필요하다." },
+        { id: "s3_im4", s: "갑자기 쓰러졌어요, 금방 깼어요, 가슴 두근거림 있었어요", o: "심전도 정상, 외상 없음, 짧은 의식소실, 혈압 정상", a: "실신", options: ["실신", "발작 장애", "일과성 허혈 발작", "뇌수막염"], p: "원인 평가", p_options: ["원인 평가", "항경련제 투여", "혈전용해 치료", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "일시적 뇌관류 저하로 의식 소실 발생. 원인 감별이 필요하다." },
+        { id: "s3_im5", s: "심한 두통과 구역감, 빛이 불편, 가끔 어지러움, 통증 7점", o: "신경학적 이상 없음, 검사 정상, 스트레스 증가", a: "편두통", options: ["편두통", "뇌수막염", "뇌졸중", "긴장성 두통"], p: "진통제 투여", p_options: ["진통제 투여", "항생제 투여", "수액 공급", "혈전용해 치료"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "편측성 두통과 감각 과민이 특징이다. 증상 완화 치료가 필요하다." },
+        { id: "s3_im6", s: "머리가 조여요, 양쪽 다 아파요, 스트레스 심해요, 통증 4점", o: "신경학적 이상 없음, 검사 정상, 근긴장 증가", a: "긴장성 두통", options: ["긴장성 두통", "편두통", "뇌염", "실신"], p: "스트레스 관리", p_options: ["스트레스 Management", "항생제 투여", "수액 공급", "항경련제 투여"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "양측 압박성 두통이다. 긴장 완화가 핵심이다." },
+        { id: "s3_im7", s: "눈앞이 깜깜, 어지러움, 식은땀, 쓰러져 있었어요", o: "혈압 85/50, 심박수 120, 창백, 탈수 의심", a: "실신", options: ["실신", "저혈압", "뇌졸중", "만성 신부전"], p: "수액 공급", p_options: ["수액 공급", "혈전용해 치료", "항생제 투여", "항경련제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "저혈압으로 뇌관류 감소 발생. 수액 공급이 필요하다." },
+        { id: "s3_im8", s: "빙빙 돌아요, 균형 안 잡혀요, 메스꺼워요, 통증 없음", o: "안진, 보행 불안정, 신경학적 결손 없음", a: "어지럼증", options: ["어지럼증", "뇌졸중", "발작 장애", "만성 신부전"], p: "전정억제제 투여", p_options: ["전정억제제 투여", "혈전용해 치료", "항경련제 투여", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "전정계 이상으로 인한 현훈이다. 증상 완화 치료가 필요하다." },
+        { id: "s3_im9", s: "열이 나고 목이 뻣뻣, 두통 6점, 빛이 불편", o: "목 경직, WBC 상승, 뇌척수액 이상, 발열", a: "뇌수막염", options: ["뇌수막염", "뇌염", "편두통", "요로감염"], p: "항생제 투여", p_options: ["항생제 투여", "항바이러스제 투여", "수액 공급", "진통제 투여"], defectCategory: "객관적 가스분석 오독", rationale: "수막 자극 징후가 존재한다. 항생제 치료가 필요하다." },
+        { id: "s3_im10", s: "고열 + 혼돈, 말 이상, 통증 3점", o: "EEG 이상, 발열, 의식저하, 신경학적 변화", a: "뇌염", options: ["뇌염", "뇌수막염", "발작 장애", "편두통"], p: "항바이러스제 투여", p_options: ["항바이러스제 투여", "항생제 투여", "수액 공급", "진통제 투여"], defectCategory: "객관적 가스분석 오독", rationale: "뇌 실질 감염으로 신경증상 발생. 항바이러스 치료가 필요하다." },
+        { id: "s3_im11", s: "소변이 안 나와요, 아랫배 불편, 통증 4점", o: "방광 팽만, 잔뇨 증가, 소변량 감소", a: "요정체", options: ["요정체", "요로감염", "만성 신부전", "급성 신손상"], p: "도뇨 시행", p_options: ["도뇨 시행", "항생제 투여", "수액 공급", "혈전용해 치료"], defectCategory: "임상적 특이 징후 간과", rationale: "배뇨 기능 장애로 소변 배출이 어렵다. 도뇨 시행이 필요하다." },
+        { id: "s3_im12", s: "소변 볼 때 따가워요, 열이 나요, 아랫배가 불편해요, 통증 5점", o: "WBC 상승, 세균뇨, 발열, 배뇨통", a: "요로감염", options: ["요로감염", "요정체", "만성 신부전", "간염"], p: "항생제 투여", p_options: ["항생제 투여", "도뇨 시행", "수액 공급", "진통제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "세균 감염으로 인한 요로 염증이다. 항생제 치료가 필요하다." },
+        { id: "s3_im13", s: "소변이 약하게 나와요, 밤에 자주 깨요, 잔뇨감 있어요, 통증 3점", o: "전립선 비대, 요속 감소, 잔뇨 증가", a: "전립선 비대증", options: ["전립선 비대증", "요정체", "요로감염", "급성 신손상"], p: "알파차단제 투여", p_options: ["알파차단제 투여", "항생제 투여", "도뇨 시행", "수액 공급"], defectCategory: "임상적 특이 징후 간과", rationale: "전립선 비대로 배뇨 장애 발생. 약물로 배출 개선이 필요하다." },
+        { id: "s3_im14", s: "몸이 붓고 피곤해요, 숨이 차요, 소변이 줄었어요, 통증 없음", o: "GFR 감소, 크레아티닌 상승, 부종, 고혈압", a: "만성 신부전", options: ["만성 신부전", "급성 신손상", "간경변", "빈혈"], p: "수분 제한", p_options: ["수분 제한", "항생제 투여", "혈전용해 치료", "진통제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "만성 신기능 저하 상태이다. 체액 및 전해질 조절이 필요하다." },
+        { id: "s3_im15", s: "소변이 갑자기 안 나와요, 붓고 있어요, 피곤해요, 통증 4점", o: "크레아티닌 GFR 저하, 소변량 급감, BUN 증가", a: "급성 신손상", options: ["급성 신손상", "만성 신부전", "요로감염", "간염"], p: "수액 공급", p_options: ["수액 공급", "항생제 투여", "도뇨 시행", "혈전용해 치료"], defectCategory: "임상적 특이 징후 간과", rationale: "급성 신기능 저하이다. 원인 교정과 수액이 필요하다." },
+        { id: "s3_im16", s: "땀이 많이 나요, 심장이 빨리 뛰어요, 불안해요, 통증 3점", o: "체온 상승, 심박수 140, 갑상선 호르몬 상승", a: "갑상선 기능항진 위기", options: ["갑상선 기능항진 위기", "갑상선 기능저하증", "DKA", "뇌염"], p: "항갑상선제 투여", p_options: ["항갑상선제 투여", "수액 공급", "항생제 투여", "항경련제 투여"], defectCategory: "복합적 임상 상관관계 무시", rationale: "갑상선 호르몬 과다 상태이다. 응급 치료가 필요하다." },
+        { id: "s3_im17", s: "너무 춥고 힘이 없어요, 말이 느려요, 기운이 없어요, 통증 2점", o: "저체온, 서맥, TSH 상승, 의식저하", a: "점액수종 혼수", options: ["점액수종 혼수", "갑상선 기능항진 위기", "CKD", "UTI"], p: "갑상선호르몬 투여", p_options: ["갑상선호르몬 투여", "수액 공급", "항생제 투여", "혈전용해 치료"], defectCategory: "복합적 임상 상관관계 무시", rationale: "갑상선 기능저하의 중증 상태이다. 호르몬 보충이 필요하다." },
+        { id: "s3_im18", s: "심장이 불규칙하게 뛰어요, 어지러워요, 숨이 차요, 통증 3점", o: "ECG 불규칙 리듬, 심박수 150, 심방세동 의심", a: "부정맥", options: ["부정맥", "심부전", "뇌졸중", "빈혈"], p: "항부정맥제 투여", p_options: ["항부정맥제 투여", "이뇨제 투여", "수액 공급", "항생제 투여"], defectCategory: "부적절한 진단 검사 해석", rationale: "심장 리듬 이상이다. 리듬 조절이 필요하다." },
+        { id: "s3_im19", s: "가슴이 조여요, 왼팔이 아파요, 식은땀이 나요, 통증 8점", o: "ST 변화, 트로포닌 상승, 혈압 변동", a: "흉통(심인성 의심)", options: ["흉통(심인성 의심)", "폐렴", "GERD", "간염"], p: "아스피린 투여", p_options: ["아스피린 투여", "항생제 투여", "수액 공급", "진통제 투여"], defectCategory: "전형적 통증 편견에 따른 오진", rationale: "전형적인 심근허혈 소견이다. 아스피린은 혈소판 응집을 억제하여 관상동맥 혈전의 진행을 줄이는 데 도움이 된다." },
+        { id: "s3_im20", s: "가슴이 찢어질 듯 아파요, 숨이 힘들어요, 식은땀, 통증 9점", o: "ST 상승, 트로포닌 상승, 저혈압 경향", a: "심근허혈 의심", options: ["심근허혈 의심", "폐렴", "요로감염", "CKD"], p: "재관류 치료", p_options: ["재관류 치료", "항생제 투여", "수액 공급", "항경련제 투여"], defectCategory: "부적절한 진단 검사 해석", rationale: "급성 심근 허혈 상태이다. 즉각적인 재관류 치료가 필요하다." },
+        { id: "s3_im21", s: "근육이 쥐나요, 손이 떨려요, 저려요, 통증 4점", o: "K 2.8, 심전도 변화, 근력 저하", a: "저칼륨혈증", options: ["저칼륨혈증", "고칼륨혈증", "탈수", "CKD"], p: "칼륨 보충 투여", p_options: ["칼륨 보충 투여", "이뇨제 투여", "항생제 투여", "혈전용해 치료"], defectCategory: "부적절한 진단 검사 해석", rationale: "칼륨 부족으로 신경근 이상 발생. 칼륨 보충이 필요하다." },
+        { id: "s3_im22", s: "손이 저리고 심장이 이상해요, 근육이 약해요, 통증 5점", o: "K 6.2, T파 상승, 부정맥, 근력 저하", a: "고칼륨혈증", options: ["고칼륨혈증", "저칼륨혈증", "CKD", "요로감염"], p: "칼륨 감소 치료", p_options: ["칼륨 감소 치료", "수액 공급", "항생제 투여", "진통제 투여"], defectCategory: "부적절한 진단 검사 해석", rationale: "칼륨 과다로 심장 위험 증가. 즉각적인 교정이 필요하다." },
+        { id: "s3_im23", s: "숨이 차요, 누우면 더 힘들어요, 다리가 붓고 있어요, 통증 없음", o: "폐울혈, BNP 상승, 하지부종", a: "심부전", options: ["심부전", "폐렴", "만성 신부전", "간염"], p: "이뇨제 투여", p_options: ["이뇨제 투여", "항생제 투여", "수액 공급", "진통제 투여"], defectCategory: "복합적 임상 상관관계 무시", rationale: "심장 기능 저하로 체액 정체 발생. 이뇨제가 필요하다." },
+        { id: "s3_im24", s: "기침할 때 가래에 피가 섞여요, 열이 나요, 숨이 차요, 통증 5점", o: "폐침윤, WBC 상승, 객담 증가", a: "폐렴", options: ["폐렴", "폐부종", "CKD", "GERD"], p: "항생제 투여", p_options: ["항생제 투여", "이뇨제 투여", "수액 공급", "항경련제 투여"], defectCategory: "복합적 임상 상관관계 무시", rationale: "감염성 폐 질환이다. 항생제 치료가 필요하다." },
+        { id: "s3_im25", s: "숨이 너무 차요, 가슴 답답, 산소 부족 느낌, 통증 6점", o: "ABG 저산소증, SpO2 85%, 호흡수 증가", a: "급성 호흡부전", options: ["급성 호흡부전", "폐렴", "CKD", "빈혈"], p: "산소요법 시행", p_options: ["산소요법 시행", "항생제 투여", "혈전용해 치료", "수액 공급"], defectCategory: "진단의 우선순위 혼동", rationale: "가스교환 장애 상태이다. 산소 공급이 우선이다." },
+        { id: "s3_im26", s: "기침 많아요, 숨이 차요, 누우면 더 힘들어요, 통증 없음", o: "심비대, BNP 상승, 폐울혈", a: "심부전", options: ["심부전", "폐렴", "GERD", "간염"], p: "이뇨제 투여", p_options: ["이뇨제 투여", "항생제 투여", "수액 공급", "진통제 투여"], defectCategory: "복합적 임상 상관관계 무시", rationale: "심장 기능 저하 상태이다. 체액 제거가 필요하다." },
+        { id: "s3_im27", s: "심장이 너무 빨라요, 불안해요, 어지러워요, 통증 3점", o: "심박수 160, GFR 수치 안정, ECG 빈맥", a: "부정맥", options: ["부정맥", "뇌졸중", "CKD", "간염"], p: "항부정맥제 투여", p_options: ["항부정맥제 투여", "수액 공급", "항생제 투여", "혈전용해 치료"], defectCategory: "부적절한 진단 검사 해석", rationale: "빠른 심장 리듬 이상이다. 리듬 안정화가 필요하다." },
+        { id: "s3_im28", s: "검은 변이 나와요, 배가 아파요, 어지러워요, 통증 6점", o: "Hb 감소, 흑색변, 혈압 저하", a: "위장관 출혈 의심", options: ["위장관 출혈 의심", "GERD", "UTI", "CKD"], p: "지혈 치료", p_options: ["지혈 치료", "항생제 투여", "수액 공급", "항경련제 투여"], defectCategory: "복합적 임상 상관관계 무시", rationale: "소화관 출혈 의심 상태이다. 지혈과 안정이 필요하다." },
+        { id: "s3_im29", s: "배가 안 움직여요, 구토 있어요, 더부룩해요, 통증 5점", o: "장음 감소, 복부 팽만, X-ray 가스 정체", a: "장마비", options: ["장마비", "GERD", "UTI", "CKD"], p: "장운동 촉진", p_options: ["장운동 촉진", "항생제 투여", "수액 공급", "혈전용해 치료"], defectCategory: "복합적 임상 상관관계 무시", rationale: "장 운동이 정지된 상태이다. 장 기능 회복이 필요하다." },
+        { id: "s3_im30", s: "식욕이 없어요, 메스꺼워요, 기운 없어요, 통증 3점", o: "AST/ALT 상승, 황달, 간비대", a: "간염", options: ["간염", "CKD", "UTI", "폐렴"], p: "간기능 보호 치료", p_options: ["간기능 보호 치료", "항생제 투여", "수액 공급", "혈전용해 치료"], defectCategory: "복합적 임상 상관관계 무시", rationale: "간세포 염증 및 손상 상태이다. 간 기능 보호가 필요하다." }
+      ],
+      stage3Orthopedics: [
+        { id: "s3_os1", s: "다리가 터질 것 같아요, 통증 9점입니다, 저려요, 점점 심해져요", o: "근육 압력 증가, 피부 긴장, 감각 저하, 모세혈관 재충혈 지연, 부종", a: "구획증후군", options: ["구획증후군", "근육 염좌", "인대 염좌", "타박상"], p: "근막 절개 수술", p_options: ["근막 절개 수술", "냉찜질", "물리치료", "산소공급"], defectCategory: "임상 안전 규칙 위반", rationale: "근육 구획 내 압력이 상승하여 혈류가 차단된 응급 상태이다. 즉각적인 감압 수술이 필요하다." },
+        { id: "s3_os2", s: "골절 이후 숨이 갑자기 차요, 가슴 답답해요, 통증은 없어요", o: "산소포화도 감소, 점상출혈, 혼돈, 빈호흡, 발열, x-ray상 골절", a: "지방색전증", options: ["지방색전증", "폐렴", "심부전", "타박상"], p: "산소 공급", p_options: ["산소 공급", "항생제 투여", "이뇨제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "골절 후 지방이 혈류로 유입되어 폐와 뇌에 영향을 준다. 산소 공급이 우선이다." },
+        { id: "s3_os3", s: "허벅지가 점점 아파요, 통증 6점입니다, 절뚝거려요, 움직이면 심해요", o: "초기 엑스레이 정상, 골두 압통, 혈류 감소, MRI 이상", a: "무혈성 괴사", options: ["무혈성 괴사", "골절", "염좌", "타박상"], p: "체중 부하 제한", p_options: ["체중 부하 제한", "온찜질", "물리치료", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "혈류 차단으로 뼈 조직이 괴사하는 질환이다. 초기에는 체중 부하 제한이 중요하다." },
+        { id: "s3_os4", s: "발목 삐끗했어요, 통증 7점입니다, 붓고 있어요, 걷기 힘들어요", o: "관절 안정성 유지, 부종, 압통, 운동 시 통증, 보행 가능", a: "인대 염좌", options: ["인대 염좌", "골절", "탈구", "신경 손상"], p: "냉찜질", p_options: ["냉찜질", "수술", "항생제 투여", "혈전 치료"], defectCategory: "임상 안전 규칙 위반", rationale: "인대가 늘어나거나 부분 손상된 상태이다. 보존적 치료가 기본이다." },
+        { id: "s3_os5", s: "팔이 끊어진 느낌이에요, 통증 8점입니다, 움직일 수 없어요, 힘이 빠져요", o: "힘줄 단절, 운동 불가, 부종, 압통", a: "힘줄 파열", options: ["힘줄 파열", "염좌", "타박상", "점액낭염"], p: "수술 치료", p_options: ["수술 치료", "냉찜질", "항생제 투여", "물리치료"], defectCategory: "임상 안전 규칙 위반", rationale: "힘줄이 완전히 파열된 상태이다. 수술적 봉합이 필요하다." },
+        { id: "s3_os6", s: "무릎이 걸려요, 통증 5점입니다, 뚝 소리 났어요, 펴기 힘들어요", o: "자기공명영상 손상, 관절 잠김, 부종, 운동 제한", a: "반월상연골 파열", options: ["반월상연골 파열", "골절", "탈구", "점액낭염"], p: "관절경 수술", p_options: ["관절경 수술", "산소 공급", "항생제 투여", "물리치료"], defectCategory: "임상적 특이 징후 간과", rationale: "관절 내 연골 구조 손상이다. 관절경 수술이 필요하다." },
+        { id: "s3_os7", s: "어깨가 너무 아파요, 통증 7점입니다, 팔이 안 올라가요, 힘이 빠져요", o: "MRI 손상, 근력 저하, 운동 제한, 압통", a: "회전근개 파열", options: ["회전근개 파열", "염좌", "점액낭염", "활막염"], p: "수술 치료", p_options: ["수술 치료", "물리치료", "온찜질", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "어깨 안정 구조가 손상된 상태이다. 수술이 필요하다." },
+        { id: "s3_os8", s: "무릎이 흔들려요, 통증 6점입니다, 불안정합니다, 넘어질 것 같아요", o: "전방 불안정성, 자기공명영상 손상, 부종, 운동 제한", a: "전방십자인대 손상", options: ["전방십자인대 손상", "후방십자인대 손상", "염좌", "타박상"], p: "재건 수술", p_options: ["재건 수술", "물리치료", "수액 공급", "항생제 투여"], defectCategory: "임상 안전 규칙 위반", rationale: "무릎 전방 안정성이 소실된 상태이다. 수술적 재건이 필요하다." },
+        { id: "s3_os9", s: "뒤로 밀릴 때 불안합니다, 통증 5점입니다, 휘청거립니다, 불안정합니다", o: "후방 이동 증가, MRI 손상, 부종, 운동 제한", a: "후방십자인대 손상", options: ["후방십자인대 손상", "전방십자인대 손상", "염좌", "점액낭염"], p: "재건 수술", p_options: ["재건 수술", "물리치료", "냉찜질", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "무릎 후방 안정성이 떨어진 상태이다. 수술이 필요하다." },
+        { id: "s3_os10", s: "무릎 안쪽이 아파요, 통증 5점입니다, 휘청거립니다, 불안정합니다", o: "내측 압통, 인대 손상, 부종, 운동 제한", a: "내측측부인대 손상", options: ["내측측부인대 손상", "외측측부인대 손상", "염좌", "타박상"], p: "보조기 착용", p_options: ["보조기 착용", "수액", "냉찜질", "항생제 투여"], defectCategory: "임상 안전 규칙 위반", rationale: "무릎 내측 인대 손상이다. 보존적 치료가 필요하다." },
+        { id: "s3_os11", s: "무릎 바깥쪽이 아파요, 통증 5점입니다, 휘청거립니다, 불안정합니다", o: "외측 압통, 인대 손상, 부종, 운동 제한", a: "외측측부인대 손상", options: ["외측측부인대 손상", "내측측부인대 손상", "염좌", "점액낭염"], p: "보조기 착용", p_options: ["보조기 착용", "수술", "냉찜질", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "무릎 외측 인대 손상이다. 보존 치료가 필요하다." },
+        { id: "s3_os12", s: "관절이 빠진 느낌입니다, 통증 8점입니다, 움직일 수 없습니다, 변형이 있습니다", o: "관절 변형, 운동 제한, 엑스레이 탈구, 부종", a: "관절 탈구", options: ["관절 탈구", "염좌", "점액낭염", "타박상"], p: "관절 정복술", p_options: ["관절 정복술", "물리치료", "항생제 투여", "진통제 투여"], defectCategory: "임상 안전 규칙 위반", rationale: "관절 위치가 이탈된 상태이다. 정복이 필요하다." },
+        { id: "s3_os13", s: "어께가 빠졌어요, 통증 8점입니다, 팔을 못 움직입니다, 변형이 있어요", o: "관절 변형, 운동 제한, 엑스레이 탈구", a: "어깨 탈구", options: ["어깨 탈구", "점액낭염", "염좌", "골절"], p: "관절 정복술", p_options: ["관절 정복술", "물리치료", "냉찜질", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "어깨 관절이 정상 위치를 벗어난 상태이다. 정복이 필요하다." },
+        { id: "s3_os14", s: "엉덩이가 빠진 느낌입니다, 통증 8점입니다, 다리를 못 움직입니다, 변형이 있습니다", o: "다리 길이 변화, 운동 제한, 엑스레이 탈구", a: "고관절 탈구", options: ["고관절 탈구", "염좌", "점액낭염", "타박상"], p: "관절 정복술", p_options: ["관절 정복술", "물리치료", "항생제 투여", "진통제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "고관절 위치가 이탈된 상태이다. 정복이 필요하다." },
+        { id: "s3_os15", s: "인공관절이 빠진 느낌입니다, 통증 6점입니다, 불안정합니다, 걷기 힘듭니다", o: "인공관절 위치 이상, 운동 제한, 엑스레이 탈구", a: "인공관절 탈구", options: ["인공관절 탈구", "염좌", "점액낭염", "타박상"], p: "재수술", p_options: ["재수술", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "인공관절이 정상 위치에서 벗어난 상태이다. 재수술이 필요하다." },
+        { id: "s3_os16", s: "금속이 부러진 느낌입니다, 통증 7점입니다, 불안정합니다, 움직이면 심합니다", o: "금속 파손, 고정 실패, X-ray 이상", a: "금속 내고정물 실패", options: ["금속 내고정물 실패", "금속 고정물 이완", "염좌", "점액낭염"], p: "재수술", p_options: ["재수술", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "고정 장치가 기능을 상실한 상태이다. 재수술이 필요하다." },
+        { id: "s3_os17", s: "금속이 흔들리는 느낌입니다, 통증 5점입니다, 불안정합니다, 붓습니다", o: "고정물 움직임 증가, 영상 이상", a: "금속 고정물 이완", options: ["금속 고정물 이완", "골절", "염좌", "점액낭염"], p: "재고정 수술", p_options: ["재고정 수술", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "고정 장치가 느슨해진 상태이다. 재고정이 필요하다." },
+        { id: "s3_os18", s: "뼈가 잘 안 붙어요, 통증 5점입니다, 회복이 느려요, 움직이면 아픕니다", o: "골 형성 지연, callus 감소, 영상 지연", a: "골절 지연유합", options: ["골절 지연유합", "불유합", "부정유합", "염좌"], p: "골 자극 치료", p_options: ["골 자극 치료", "수술", "물리치료", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "골 치유가 지연된 상태이다. 자극 치료가 필요하다." },
+        { id: "s3_os19", s: "뼈가 안 붙어요, 통증 6점입니다, 불안정합니다, 움직이면 심합니다", o: "골 간격 유지, callus 없음, 영상 이상", a: "골절 불유합", options: ["골절 불유합", "타박상", "척수 압박", "염좌"], p: "수술 치료", p_options: ["수술 치료", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "골 치유가 실패한 상태이다. 수술이 필요하다." },
+        { id: "s3_os20", s: "뼈가 삐뚤게 붙었어요, 통증 5점입니다, 변형이 있습니다, 보행 이상", o: "각도 변형, X-ray 이상", a: "부정유합", options: ["부정유합", "신경근병증", "지연유합", "염좌"], p: "교정 수술", p_options: ["교정 수술", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "잘못된 방향으로 골이 유합된 상태이다. 교정 수술이 필요하다." },
+        { id: "s3_os21", s: "다리가 안 움직입니다, 감각이 둔합니다, 통증 7점입니다, 배뇨 이상 있습니다", o: "하지 마비, 감각 저하, MRI 압박, 방광 기능 이상", a: "척수 압박", options: ["척수 압박", "마미증후군", "신경근병증", "염좌"], p: "응급 감압 수술", p_options: ["응급 감압 수술", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "척수 압박으로 신경 기능이 저하된 상태이다. 응급 수술이 필요하다." },
+        { id: "s3_os22", s: "다리 힘이 없습니다, 감각 둔합니다, 통증 6점입니다, 배뇨 이상 있습니다", o: "하지 마비, 감각 저하, 방광 기능 장애", a: "마미증후군", options: ["마미증후군", "골절", "신경근병증", "염좌"], p: "응급 감압 수술", p_options: ["응급 감압 수술", "물리치료", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "신경다발 압박으로 발생하는 응급 질환이다. 즉각 수술이 필요하다." },
+        { id: "s3_os23", s: "허리에서 다리로 저립니다, 통증 7점입니다, 힘이 빠집니다, 감각 이상", o: "신경 압박, 방사통, 감각 저하", a: "신경근병증", options: ["신경근병증", "골절", "말초신경 손상", "염좌"], p: "신경 차단 치료", p_options: ["신경 차단 치료", "수액", "냉찜질", "물리치료"], defectCategory: "임상적 특이 징후 간과", rationale: "신경근 압박으로 방사통이 발생한 상태이다. 신경 치료가 필요하다." },
+        { id: "s3_os24", s: "팔이 저립니다, 감각 이상, 통증 5점입니다, 힘이 빠집니다", o: "신경 전도 감소, 감각 저하, 근력 저하", a: "말초신경 손상", options: ["말초신경 손상", "타박상", "염좌", "점액낭염"], p: "신경 치료", p_options: ["신경 치료", "수액", "냉찜질", "항생제 투여"], defectCategory: "임상적 특이 징후 간과", rationale: "말초 신경 기능이 손상된 상태이다. 신경 치료가 필요하다." },
+        { id: "s3_os25", s: "멍이 크게 들었습니다, 통증 5점입니다, 부어 있습니다, 움직이면 아픕니다", o: "연부조직 출혈, 부종, 압통", a: "심부 조직 타박상", options: ["심부 조직 타박상", "타박상", "점액낭염", "골절"], p: "냉찜질", p_options: ["냉찜질", "수술", "항생제 투여", "물리치료"], defectCategory: "임상적 특이 징후 간과", rationale: "깊은 연부 조직 손상이다. 보존 치료가 필요하다." },
+        { id: "s3_os26", s: "근육이 삐끗했습니다, 통증 4점입니다, 뻐근합니다, 움직이면 아픕니다", o: "근섬유 손상, 압통, 부종", a: "근육 염좌", options: ["근육 염좌", "골절", "점액낭염", "타박상"], p: "냉찜질", p_options: ["냉찜질", "수액", "항생제 투여", "물리치료"], defectCategory: "임상적 특이 징후 간과", rationale: "근육 손상 상태이다. 보존 치료가 필요하다." },
+        { id: "s3_os27", s: "무릎이 뻣뻣합니다, 통증 5점입니다, 아침에 심합니다, 움직임 제한", o: "관절 간격 감소, 변형 진행, 영상 변화", a: "골관절염 악화", options: ["골관절염 악화", "활막염", "점액낭염", "염좌"], p: "소염제 투여", p_options: ["소염제 투여", "수술", "항생제 투여", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "퇴행성 관절 질환이 진행된 상태이다. 소염 치료가 필요하다." },
+        { id: "s3_os28", s: "관절이 붓고 아픕니다, 통증 6점입니다, 열감 있습니다, 움직이면 악화됩니다", o: "활막 비후, 관절 부종, 활액 증가", a: "활막염", options: ["활막염", "타박상", "골관절염", "염좌"], p: "소염제 투여", p_options: ["소염제 투여", "항생제 투여", "수술", "냉찜질"], defectCategory: "임상적 특이 징후 간과", rationale: "관절 활막 염증 상태이다. 소염 치료가 필요하다." },
+        { id: "s3_os29", s: "팔꿈치가 붓고 아픕니다, 통증 5점입니다, 열감 있습니다, 움직이면 아릅니다", o: "점액낭 팽창, 압통, 부종", a: "점액낭염", options: ["점액낭염", "활막염", "염좌", "골절"], p: "냉찜질", p_options: ["냉찜질", "수술", "산소", "수액"], defectCategory: "임상적 특이 징후 간과", rationale: "점액낭 염증 상태이다. 보존 치료가 필요하다." },
+        { id: "s3_os30", s: "무릎 안에 피가 찬 느낌입니다, 통증 6점입니다, 붓고 뜨겁습니다, 움직이기 힘듭니다", o: "관절 내 혈종, 부종, 운동 제한, 압통", a: "관절 내 혈종", options: ["관절 내 혈종", "활막염", "점액낭염", "염좌"], p: "관절 천자", p_options: ["관절 천자", "온찜질", "수액", "물리치료"], defectCategory: "임상적 특이 징후 간과", rationale: "관절 내부 출혈로 압력이 증가한 상태이다. 배액이 필요하다." }
+      ],
+
+      stage4Pools: {
+        falls: [
+          {
+            id: "s4_q1",
+            s: "침대에서 내려오다 넘어졌어요, 허리가 아파요 NRS 6점, 혼자 화장실 가다 미끄러졌어요",
+            o: "바닥에서 발견됨, 좌측 하지 압통, 보행 불가, 활력징후 안정",
+            a: "낙상 발생",
+            options: ["낙상 발생", "낙상 위험 상태", "골절 의심 손상", "두부 외상 의심"],
+            p: "영상검사",
+            p_options: ["영상검사", "보행 격려", "진통제", "온찜질"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "실제 낙상 사건 발생으로 손상 여부 평가가 필요하다. 영상검사를 통해 골절 여부 확인이 필요하다."
+          },
+          {
+            id: "s4_q2",
+            s: "어지러워요, 혼자 움직이고 싶어요, 다리에 힘이 없어요 NRS 3점",
+            o: "보행 불안정, 근력 저하, 낙상 고위험군, 침상난간 미사용, 균형 검사 이상",
+            a: "낙상 위험 상태",
+            options: ["낙상 위험 상태", "낙상 발생", "의식 변화 동반 낙상", "골절 의심 손상"],
+            p: "낙상 예방교육",
+            p_options: ["낙상 예방교육", "침상난간 적용", "보행 보조", "영상검사"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "낙상은 없지만 고위험 상태이다. 사전 예방 중재가 필요하다."
+          },
+          {
+            id: "s4_q3",
+            s: "다리가 부러진 느낌이에요, NRS 8점입니다, 움직일 수 없어요",
+            o: "X-ray 골절 의심, 부종, 변형, 압통, 보행 불가",
+            a: "골절 의심 손상",
+            options: ["골절 의심 손상", "낙상 발생", "두부 외상", "낙상 위험 상태"],
+            p: "영상검사",
+            p_options: ["영상검사", "고정", "진통제", "냉찜질"],
+            defectCategory: "부적절한 진단 검사 해석",
+            rationale: "영상학적으로 골절 의심 소견이다. 정확한 진단을 위해 추가 검사가 필요하다."
+          },
+          {
+            id: "s4_q4",
+            s: "머리를 부딪혔어요, 어지러워요 NRS 5점, 토할 것 같아요",
+            o: "두부 타박, 의식 명료, 구토 없음, 활력징후 정상",
+            a: "두부 외상 의심",
+            options: ["두부 외상 의심", "낙상 발생", "의식 변화", "골절"],
+            p: "CT 검사",
+            p_options: ["CT 검사", "물리치료", "안정", "진통제"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "두부 손상 가능성으로 영상 평가 필요하다. 신경학적 이상 여부 확인이 필요하다."
+          },
+          {
+            id: "s4_q5",
+            s: "기억이 잘 안나요, 넘어졌어요, 머리가 멍해요 NRS 4점",
+            o: "GCS 13점, 혼돈 상태, 낙상 흔적, 활력징후 안정",
+            a: "의식 변화 동반 낙상",
+            options: ["의식 변화 동반 낙상", "낙상 발생", "두부 외상", "골절 의심"],
+            p: "CT 검사",
+            p_options: ["CT 검사", "수액", "산소", "진통제"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "의식 변화 동반으로 신경학적 평가 필요하다. 뇌 손상 여부 확인이 중요하다."
+          }
+        ],
+        transfusion: [
+          {
+            id: "s4_q6",
+            s: "몸이 뜨거워요, 숨이 차요, 오한이 있어요 NRS 6점",
+            o: "체온 38.5도 상승, 산소포화도 90%, 수혈 중 발생, 혈압 상승",
+            a: "급성 수혈 반응",
+            options: ["급성 수혈 반응", "알레르기", "용혈", "발열성"],
+            p: "수혈 중단",
+            p_options: ["수혈 중단", "산소 공급", "수액", "항히스타민"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "수혈 중 발생한 급성 반응이다. 즉시 수혈 중단이 필요하다."
+          },
+          {
+            id: "s4_q7",
+            s: "가려워요, 두드러기 올라와요, 답답해요 NRS 3점",
+            o: "전신 발진, 팽진, 혈압 정상, 수혈 중 발생, 호흡음 정상",
+            a: "알레르기 수혈 반응",
+            options: ["알레르기 수혈 반응", "급성 반응", "용혈", "발열성"],
+            p: "수혈 중단",
+            p_options: ["수혈 중단", "항히스타민", "산소", "수액"],
+            defectCategory: "복합적 임상 상관관계 무시",
+            rationale: "알레르기 반응으로 중단이 우선이다. 추가 약물 처치가 필요하다."
+          },
+          {
+            id: "s4_q8",
+            s: "춥고 떨려요, 열이 나요 NRS 5점, 몸살 같아요",
+            o: "체온 38.8도, 혈압 안정, 수혈 중 발생, 발진 없음",
+            a: "발열성 수혈 반응",
+            options: ["발열성 수혈 반응", "급성", "용혈", "알레르기"],
+            p: "수혈 중단",
+            p_options: ["수혈 중단", "해열제", "수액", "항히스타민"],
+            defectCategory: "활력징후 측정값 무시",
+            rationale: "발열 중심 수혈 반응이다. 수혈 중단 후 관찰이 필요하다."
+          },
+          {
+            id: "s4_q9",
+            s: "허리가 아파요, 소변이 검어요, 오한 있어요 NRS 7점",
+            o: "혈뇨, Hb 감소, 혈압 저하, 수혈 중 발생",
+            a: "용혈 반응",
+            options: ["용혈 반응", "급성", "발열", "알레르기"],
+            p: "수혈 중단",
+            p_options: ["수혈 중단", "수액", "이뇨제", "산소"],
+            defectCategory: "진단의 우선순위 혼동",
+            rationale: "적혈구 파괴로 인한 응급 상태이다. 즉시 중단이 필요하다."
+          },
+          {
+            id: "s4_q10",
+            s: "수혈끝나고 숨이 막혀요, 가슴이 답답해요 NRS 6점",
+            o: "SpO₂ 88%, 빈호흡, 수혈 중 발생, 청색증 없음",
+            a: "수혈 후 호흡곤란",
+            options: ["수혈 후 호흡곤란", "급성", "용혈", "알레르기"],
+            p: "산소 공급",
+            p_options: ["산소 공급", "수혈 중단", "이뇨제", "항히스타민"],
+            defectCategory: "복합적 임상 상관관계 무시",
+            rationale: "호흡기 합병증이다. 산소 공급이 우선이다."
+          }
+        ],
+        medication: [
+          {
+            id: "s4_q11",
+            s: "약 맞고 가려워요, 두드러기 올라와요, 숨이 답답해요 NRS 4점",
+            o: "전신 발진, 팽진, 투약 직후 발생, 활력징후 정상",
+            a: "약물 알레르기",
+            options: ["약물 알레르기", "독성", "부작용", "과민"],
+            p: "약물 중단",
+            p_options: ["약물 중단", "항히스타민", "산소", "수액"],
+            defectCategory: "투약 및 물품 유실 관리 불이행",
+            rationale: "약물에 대한 면역 반응이다. 즉시 중단이 필요하다."
+          },
+          {
+            id: "s4_q12",
+            s: "주사 맞은 직후 숨이 막혀요, 목이 조이는것 같아요,어지럽고 식은땀나요",
+            o: "혈압 저하, SpO₂ 86%, 전신 두드러기, 입술 및 혀 부종",
+            a: "아나필락시스",
+            options: ["아나필락시스", "알레르기", "부작용", "독성"],
+            p: "에피네프린",
+            p_options: ["에피네프린", "산소", "수액", "약물 중단"],
+            defectCategory: "진단의 우선순위 혼동",
+            rationale: "생명을 위협하는 응급상황이다. 즉각적인 처치가 필요하다."
+          },
+          {
+            id: "s4_q13",
+            s: "약 맞고 몸이 가려워요, 숨이 답답해요, 얼굴이 붓는 느낌이에요",
+            o: "두드러기, 혈압 100/60, 호흡수 증가, 산소포화도 94%",
+            a: "과민반응",
+            options: ["과민반응", "부작용", "감염", "폐쇄"],
+            p: "약물 중단 및 평가",
+            p_options: ["약물 중단 및 평가", "관류", "재삽입", "항생제"],
+            defectCategory: "투약 및 물품 유실 관리 불이행",
+            rationale: "약물에 대한 과민 반응이다."
+          },
+          {
+            id: "s4_q14",
+            s: "약 먹고 속이 울렁거려요, 어지러워요, 힘이 없어요",
+            o: "혈압 정상, 발진 없음, 구역감, 활력징후 안정",
+            a: "부작용",
+            options: ["부작용", "과민반응", "감염", "폐쇄"],
+            p: "약물 조정",
+            p_options: ["약물 조정", "항생제", "관류", "재삽입"],
+            defectCategory: "주관적-객관적 지표 불일치 오류",
+            rationale: "약물의 예상된 부작용이다."
+          },
+          {
+            id: "s4_q15",
+            s: "너무 힘들어요, 구토해요, 어지러워요 NRS 6점",
+            o: "약물 농도 상승, 의식 저하, 활력징후 변화",
+            a: "약물 독성",
+            options: ["약물 독성", "부작용", "알레르기", "과민"],
+            p: "약물 중단",
+            p_options: ["약물 중단", "해독", "수액", "관찰"],
+            defectCategory: "투약 및 물품 유실 관리 불이행",
+            rationale: "약물 과다로 인한 독성 상태이다. 중단 및 해독이 필요하다."
+          }
+        ],
+        cvc: [
+          {
+            id: "s4_q16",
+            s: "삽입 부위가 아요, 열이 나요, 몸이 으슬으슬해요 NRS 5점",
+            o: "발열 38.2도, 중심정맥관 삽입부 발적 및 삼출물관찰, 백혈구 증가",
+            a: "중심정맥관 감염 의심",
+            options: ["중심정맥관 감염 의심", "폐쇄", "이탈", "막힘"],
+            p: "배양검사",
+            p_options: ["배양검사", "중심정맥관 제거", "항생제 투여", "관찰"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "중심정맥관 관련 감염 의심 상태이다. 항생제 치료 및 배양검사가 필요하다."
+          },
+          {
+            id: "s4_q17",
+            s: "주사 안 들어가요, 당기는 느낌 있어요 NRS 3점",
+            o: "중심정맥관 주입 저항 증가, 혈액 역류 없음, 외부 이상 없음, X-ray 위치 정상",
+            a: "중심정맥관 폐쇄",
+            options: ["중심정맥관 폐쇄", "감염", "이탈", "막힘"],
+            p: "위치 및 폐쇄 여부 확인",
+            p_options: ["위치 및 폐쇄 여부 확인", "라인 교체", "항생제", "관찰"],
+            defectCategory: "부적절한 진단 검사 해석",
+            rationale: "중심정맥관 폐쇄가 의심되는 상황에서는 먼저 카테터의 기계적 원인을 확인해야 한다."
+          },
+          {
+            id: "s4_q18",
+            s: "줄이 빠진 것 같아요, 당겨졌어요 NRS 4점",
+            o: "중심정맥관 카테터 외부 노출, 삽입 깊이 감소, 주입 불가, 드레싱 이탈",
+            a: "중심정맥관 이탈",
+            options: ["중심정맥관 이탈", "감염", "폐쇄", "막힘"],
+            p: "라인 제거",
+            p_options: ["라인 제거", "재삽입", "항생제", "관찰"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "중심정맥관 위치 이탈 상태이다. 즉시 제거가 필요하다."
+          },
+          {
+            id: "s4_q19",
+            s: "주사 안 들어가요, 당기는 느낌 있어요 NRS 3점",
+            o: "PICC 주입 불가, 혈액 역류 없음, 외부 이상 없음, 초음파 정상",
+            a: "기능적 폐쇄 의심",
+            options: ["기능적 폐쇄 의심", "감염", "이탈", "폐쇄"],
+            p: "위치 및 폐쇄 여부 확인",
+            p_options: ["위치 및 폐쇄 여부 확인", "라인 교체", "항생제", "관찰"],
+            defectCategory: "부적절한 진단 검사 해석",
+            rationale: "초음파 정상인 상태로 폐쇄가 의심되는 상황에서는 먼저 기계적 원인을 파악한다."
+          },
+          {
+            id: "s4_q20",
+            s: "포트 부위가 아파요, 열이 나요, 몸이 떨려요 NRS 6점",
+            o: "케모포트 발적, 압통, 발열 38.3도, 백혈구 증가",
+            a: "케모포트 감염 의심",
+            options: ["케모포트 감염 의심", "폐쇄", "이탈", "막힘"],
+            p: "배양검사",
+            p_options: ["배양검사", "제거", "드레싱", "관찰"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "삽입 포트 감염 의심 상태이다. 감염평가를 위하여 배양검사가 우선이다."
+          },
+          {
+            id: "s4_q21",
+            s: "피가 나요, 삽입 부위가 젖었어요 NRS 5점",
+            o: "중심정맥관 드레싱 혈액 오염, 국소 출혈, 혈압 정상, Hb 정상",
+            a: "중심정맥관 출혈",
+            options: ["중심정맥관 출혈", "감염", "폐쇄", "이탈"],
+            p: "지혈",
+            p_options: ["지혈", "드레싱 교체", "제거", "관찰"],
+            defectCategory: "주관적-객관적 지표 불일치 오류",
+            rationale: "삽입부 출혈 상태이다. 지혈 처치 후 드레싱을 갱신한다."
+          },
+          {
+            id: "s4_q22",
+            s: "눌리면 아파요, 붉어요, 따끔해요 NRS 4점",
+            o: "PICC 삽입부 발적, 열감, 경미한 부종, 발열 없음",
+            a: "감염 초기 의심",
+            options: ["감염 초기 의심", "폐쇄", "이탈", "정상 반응"],
+            p: "무균 드레싱 교체 및 상태 평가",
+            p_options: ["무균 드레싱 교체 및 상태 평가", "제거", "관찰", "항생제"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "초기 감염 가능성이 있어 무균 드레싱 상태를 갱신하고 경과관찰한다."
+          }
+        ],
+        dialysis: [
+          {
+            id: "s4_q23",
+            s: "피가 나요, 투석 부위가 젖어요 NRS 6점",
+            o: "투석관 출혈 관찰, 드레싱 혈액 오염, 혈압 정상",
+            a: "출혈",
+            options: ["출혈", "감염", "폐쇄", "저혈압"],
+            p: "지혈",
+            p_options: ["지혈", "소독", "관찰", "수액"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "투석 접근로 출혈 상태이다. 즉시 지혈이 필요하다."
+          },
+          {
+            id: "s4_q24",
+            s: "투석 카테터 부위가 아파요, 열이 나요 NRS 5점",
+            o: "투석 카테터 부게 발적, 삼출물, 발열 38.1도, 백혈구 증가",
+            a: "감염",
+            options: ["감염", "출혈", "폐쇄", "저혈압"],
+            p: "배양검사",
+            p_options: ["배양검사", "제거", "드레싱", "관찰"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "접근로 감염 의심이다. 배양검사 후 소독과 항생제 투여로 이어져야 한다."
+          },
+          {
+            id: "s4_q25",
+            s: "어지러워요, 눈앞이 깜깜해요 NRS 6점",
+            o: "혈압 80/50, 투석 중 발생, 창백",
+            a: "저혈압",
+            options: ["저혈압", "출혈", "감염", "폐쇄"],
+            p: "수액",
+            p_options: ["수액", "투석 중단", "산소", "항생제"],
+            defectCategory: "활력징후 측정값 무시",
+            rationale: "투석 중 혈압 저하 상태이다. 수액 공급이 우선 시 되어야 한다."
+          },
+          {
+            id: "s4_q26",
+            s: "기계 알람 울려요, 몸이 이상해요 NRS 3점",
+            o: "투석 기계 알람 지속, 혈류 중단, 투석 중단 상태",
+            a: "기계 이상",
+            options: ["기계 이상", "출혈", "감염", "저혈압"],
+            p: "기계 점검",
+            p_options: ["기계 점검", "투석 중단", "수액", "관찰"],
+            defectCategory: "투약 및 물품 유실 관리 불이행",
+            rationale: "기계적 문제 발생으로 장비 검증 및 점검이 요구된다."
+          },
+          {
+            id: "s4_q27",
+            s: "투석관에서 피 안 나와요, 막힌 느낌 있어요 NRS 4점",
+            o: "투석관에서 혈류 없음, 압박 시 반응 없음",
+            a: "폐쇄",
+            options: ["폐쇄", "감염", "출혈", "저혈압"],
+            p: "기능적/기계적 폐쇄 확인",
+            p_options: ["기능적/기계적 폐쇄 확인", "재개통", "항생제", "관찰"],
+            defectCategory: "부적절한 진단 검사 해석",
+            rationale: "투석혈류 폐쇄 상태로, 기능적/기계적 원인 파악이 먼저이다."
+          }
+        ],
+        drain: [
+          {
+            id: "s4_q28",
+            s: "관이 빠졌어요, 배가 불편해요 NRS 5점",
+            o: "수술 후 JP drain 제거된 상태임, 배액 중단",
+            a: "이탈",
+            options: ["이탈", "감염", "막힘", "증가"],
+            p: "제거 부위 멸균 드레싱",
+            p_options: ["제거 부위 멸균 드레싱", "산소투여", "관찰", "항생제"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "배액관 이탈 상황이다. 제거된 부위의 즉각적 멸균 드레싱이 우선된다."
+          },
+          {
+            id: "s4_q29",
+            s: "피가 많이 나와요, 배가 아파요 NRS 6점",
+            o: "수술부위 JP drain 혈성 배액 증가, 양 증가, 활력징후 안정",
+            a: "배액량 급증",
+            options: ["배액량 급증", "감염", "이탈", "폐쇄"],
+            p: "관찰",
+            p_options: ["관찰", "수액", "지혈", "항생제"],
+            defectCategory: "복합적 임상 상관관계 무시",
+            rationale: "비정상적인 활동성 출혈 소지가 높은 배액 증가 현상이다."
+          },
+          {
+            id: "s4_q30",
+            s: "거의 안 나와요, 배가 더부룩해요 NRS 4점",
+            o: "수술부위 JP drain 배액 감소, 외관상 꼬임 없음",
+            a: "배액량 감소 이상",
+            options: ["배액량 감소 이상", "감염", "이탈", "폐쇄"],
+            p: "배액관 개통성 확인",
+            p_options: ["배액관 개통성 확인", "세척", "항생제", "수액"],
+            defectCategory: "부적절한 진단 검사 해석",
+            rationale: "배액관 기능 저하 상황이다. 배액관 개통성을 검토해야 한다."
+          },
+          {
+            id: "s4_q31",
+            s: "피 주머니에서 피가 안 나와요, 당기는 느낌 있어요 NRS 3점",
+            o: "수술부위 JP drain 배액 없음, 압력 증가",
+            a: "막힘",
+            options: ["막힘", "감염", "이탈", "증가"],
+            p: "배액관 개통성 확인",
+            p_options: ["배액관 개통성 확인", "교체", "항생제", "관찰"],
+            defectCategory: "투약 및 물품 유실 관리 불이행",
+            rationale: "배액관 폐쇄 상태이다. 꺾임 외 내부 폐쇄 유무 확인이 중요하다."
+          },
+          {
+            id: "s4_q32",
+            s: "피주머니 있는데가 아파요, 열이 나요 NRS 5점",
+            o: "JP drain 부위 발적과 삼출물, 발열 38도",
+            a: "감염",
+            options: ["감염", "막힘", "이탈", "증가"],
+            p: "배양검사",
+            p_options: ["배양검사", "제거", "드레싱", "관찰"],
+            defectCategory: "임상적 특이 징후 간과",
+            rationale: "배액 주위 감염 의심으로 세균 배양검사를 우선시한다."
+          }
+        ],
+        skin: [
+          {
+            id: "s4_q33",
+            s: "엉덩이가 아파요, 눌리면 따가워요, 불편해요",
+            o: "발적, 피부 손상 없음, 압박 시 비소실성 홍반, 피부 온도 상승",
+            a: "욕창 1단계",
+            options: ["욕창 1단계", "욕창 2단계", "욕창 악화", "욕창 위험 상태"],
+            p: "체위 변경",
+            p_options: ["체위 변경", "항생제", "관류", "재삽입"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "피부 결손 전 단계 욕창으로 지속적 압박을 피하기 위한 체위 변경이 요구된다."
+          },
+          {
+            id: "s4_q34",
+            s: "피부가 따가워요, 헐었어요, 아파요",
+            o: "표피 손상, 수포, 삼출물 소량, 발적 증가",
+            a: "욕창 2단계",
+            options: ["욕창 2단계", "욕창 1단계", "욕창 위험 상태", "감염"],
+            p: "드레싱",
+            p_options: ["드레싱", "항생제", "관류", "재삽입"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "진피 손상이 유발된 2단계 욕창으로 무균 보호 드레싱이 필요하다."
+          },
+          {
+            id: "s4_q35",
+            s: "점점 아파요, 상처가 커졌어요, 진물 나요",
+            o: "엉덩이 괴사 조직 일부, 삼출물 증가, 피부 깊이 증가, 발적 확산",
+            a: "욕창 악화",
+            options: ["욕창 악화", "욕창 1단계", "욕창 2단계", "욕창 위험 상태"],
+            p: "상처 관리",
+            p_options: ["상처 관리", "항생제", "관류", "재삽입"],
+            defectCategory: "주관적-객관적 지표 불일치 오류",
+            rationale: "조직 결손 깊이가 증가하여 전반적인 상처 관리가 요구된다."
+          },
+          {
+            id: "s4_q36",
+            s: "오래 누워있어요, 엉덩이가 불편해요, 저린 느낌 있어요",
+            o: "피부 변화 없음, 장기 침상, Braden score 저위험, 발적 없음",
+            a: "위험 상태",
+            options: ["위험 상태", "욕창 1단계", "악화", "감염"],
+            p: "체위 변경",
+            p_options: ["체위 변경", "항생제", "드레싱", "재삽입"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "욕창 발생 이전의 고위험 상태이다. 체위 변경으로 마찰과 압박을 제거한다."
+          },
+          {
+            id: "s4_q37",
+            s: "눌린 부위가 아파요, 저려요, 불편해요",
+            o: "국소 압박 부위 발적, 피부 손상 없음, 체위 고정, 순환 감소 없음",
+            a: "압박 손상",
+            options: ["압박 손상", "욕창 2단계", "감염", "폐쇄"],
+            p: "체위 변경",
+            p_options: ["체위 변경", "항생제", "관류", "재삽입"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "체동 제한으로 유발된 국소 조직 압박 손상 상태이다."
+          }
+        ],
+        urinary: [
+          {
+            id: "s4_q38",
+            s: "소변이 안 나와요, 아랫배가 불편해요, 당기는 느낌 있어요",
+            o: "소변백 비어 있음, 방광 팽만 촉지, 유치도뇨관 꺾임 없음, 소변량 0ml/3시간",
+            a: "폐쇄",
+            options: ["폐쇄", "감염", "이탈", "과다 배출 이상"],
+            p: "관류 확인",
+            p_options: ["관류 확인", "항생제", "재삽입", "소독"],
+            defectCategory: "투약 및 물품 유실 관리 불이행",
+            rationale: "급성 배뇨 차단이 의심되는 상황이다. 도뇨관의 물리적 막힘 여부 관류를 확인한다."
+          },
+          {
+            id: "s4_q39",
+            s: "소변 볼 때 아파요, 열이 나요, 오한이 있어요",
+            o: "체온 38.3도, 소변 혼탁, WBC 상승, 소변 냄새 증가",
+            a: "감염",
+            options: ["감염", "폐쇄", "이탈", "과다 배출 이상"],
+            p: "소변 배양검사",
+            p_options: ["소변 배양검사", "관류 확인", "재삽입", "관찰"],
+            defectCategory: "객관적 가스분석 오독",
+            rationale: "도뇨관 장기 보유로 인한 전형적인 CAUTI 의심 상황으로, 요 배양검사가 우선된다."
+          },
+          {
+            id: "s4_q40",
+            s: "소변이 거의 안 나와요, 몸이 붓는 것 같아요, 답답해요",
+            o: "소변량 100ml/8시간, 하지 부종, 혈압 150/90, BUN 상승",
+            a: "핍뇨",
+            options: ["핍뇨", "다뇨", "감염", "이탈"],
+            p: "수분 상태 확인",
+            p_options: ["수분 상태 확인", "유치도뇨관 제거", "항생제", "유치도뇨관 재삽입"],
+            defectCategory: "활력징후 측정값 무시",
+            rationale: "소변량이 급격히 저하된 상태로 체액 및 수분 공급 상태 평가가 선행되어야 한다."
+          },
+          {
+            id: "s4_q41",
+            s: "소변이 너무 많이 나와요, 계속 마셔요, 힘이 없어요",
+            o: "소변량 4000ml/day, 탈수 소견, GFR 저하, 점막 건조",
+            a: "다뇨",
+            options: ["다뇨", "핍뇨", "감염", "폐쇄"],
+            p: "전해질 확인",
+            p_options: ["전해질 확인", "관류", "항생제", "유치도뇨관 삽입"],
+            defectCategory: "복합적 임상 상관관계 무시",
+            rationale: "체액 유실 소견을 동반한 다뇨 상태로 신속한 혈청 전해질 측정이 필요하다."
+          },
+          {
+            id: "s4_q42",
+            s: "소변줄이 관이 빠졌어요, 소변이 줄었어요, 불편해요",
+            o: "유치도뇨관 외부 탈락, 소변 배출 중단, 삽입부 노출, 피부 오염 없음",
+            a: "유치도뇨관 이탈",
+            options: ["유치도뇨관 이탈", "유치도뇨관 폐쇄", "감염", "과다 배출"],
+            p: "출혈/손상확인",
+            p_options: ["출혈/손상확인", "항생제", "관류", "수액"],
+            defectCategory: "임상 안전 규칙 위반",
+            rationale: "도뇨관이 탈락되었으므로 고정 벌룬에 의한 내부 요도 장막 손상 및 혈뇨 여부를 긴급 파악해야 한다."
+          }
+        ]
+      }
+    };
+
+    let isPaused = false;
+    let gameSecondsElapsed = 0;
+    let timerInterval = null;
+    
+    let currentStage = 1; // 1 to 5
+    let currentStrikes = 0; // max 3
+    let stageQuestionIndex = 0; // 0 to 9 for Stages 1-4, dynamic for Stage 5
+    let activeQuestions = [];
+    
+    let selectedA = null;
+    let selectedP = null;
+    let selectedAElement = null;
+    let selectedPElement = null;
+
+    let currentBurgerPieces = []; 
+    const BURGER_INGREDIENT_POOL = ['lettuce', 'meat', 'tomato', 'cheese'];
+
+    let sessionLogs = {
+      overallTotalQuestions: 40,
+      overallCorrectOnFirstTry: 0,
+      overallAnswersLogged: 0,
+      stageAttempts: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 },
+      stageClears: { 1: false, 2: false, 3: false, 4: false, 5: false },
+      
+      defectClassification: {
+        "주관적-객관적 지표 불일치 오류": 0,
+        "활력징후 측정값 무시": 0,
+        "부적절한 진단 검사 해석": 0,
+        "복합적 임상 상관관계 무시": 0,
+        "진단의 우선순위 혼동": 0,
+        "전형적 통증 편견에 따른 오진": 0,
+        "임상적 특이 징후 간과": 0,
+        "객관적 가스분석 오독": 0,
+        "임상 안전 규칙 위반": 0,
+        "투약 및 물품 유실 관리 불이행": 0
+      },
+      
+      wrongAnswers1to4: [], 
+      stage5QuestionsToReview: [], 
+      stage5InitialCount: 0,
+      stage5Correct: 0,
+      stage5Wrong: 0,
+      stage5WrongLog: [] 
+    };
+
+    let globalAttempts = 0;
+    let currentScore = 0;
+    let currentCombo = 0;
+    let totalCookedBurgers = 0;
+    let userName = "";
+    let userNickname = "";
+
+    // 누적 데이터 저장용 사용자별 스키마 객체
+    let activeUserKey = "";
+    let userProfile = {
+      userName: "",
+      userNickname: "",
+      totalAttempts: 0,
+      certificates: [] // 누적 이수증 내역 보관
+    };
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast-enter glass-panel px-4 py-3 rounded-xl shadow-lg border-l-4 text-xs font-semibold flex items-center gap-2 text-slate-100`;
+      
+      if (type === 'success') {
+        toast.classList.add('border-emerald-500');
+        toast.innerHTML = `🟢 <span class="text-emerald-400">${message}</span>`;
+      } else if (type === 'error') {
+        toast.classList.add('border-rose-500');
+        toast.innerHTML = `🔴 <span class="text-rose-400">${message}</span>`;
+      } else {
+        toast.classList.add('border-sky-500');
+        toast.innerHTML = `🔵 <span>${message}</span>`;
+      }
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.remove('toast-enter');
+        toast.classList.add('toast-active');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // 사용자 키 산출 및 세션 동기화 로직
+    function syncUserDataToStorage() {
+      if (!activeUserKey) return;
+      localStorage.setItem(activeUserKey, JSON.stringify(userProfile));
+    }
+
+    function enterChefKitchen() {
+      const uInput = document.getElementById('input-username');
+      const nInput = document.getElementById('input-nickname');
+      
+      const enteredName = uInput.value.trim();
+      const enteredNick = nInput.value.trim();
+
+      if (!enteredName || !enteredNick) {
+        showToast("성명과 소속 닉네임을 모두 작성해 주세요!", "error");
+        sound.playError();
+        return;
+      }
+
+      userName = enteredName;
+      userNickname = enteredNick;
+      activeUserKey = `SOAP_CHEF_USER_${userName}_${userNickname}`;
+
+      // 로컬 스토리지 데이터 로드 및 분기처리
+      const savedData = localStorage.getItem(activeUserKey);
+      if (savedData) {
+        userProfile = JSON.parse(savedData);
+        showToast("기존 임상 훈련 데이터가 성공적으로 복원되었습니다.", "success");
+      } else {
+        userProfile = {
+          userName: userName,
+          userNickname: userNickname,
+          totalAttempts: 0,
+          certificates: []
+        };
+        syncUserDataToStorage();
+        showToast("신규 임상전문가 계정이 생성되었습니다.", "success");
+      }
+
+      // 마지막 로그인 정보 안전 보관 (자동 로그인 활성화)
+      localStorage.setItem('SOAP_CHEF_LAST_LOGIN', activeUserKey);
+
+      setupAndTransitionToMain();
+      sound.playSuccess();
+    }
+
+    function setupAndTransitionToMain() {
+      document.getElementById('text-username').innerText = userName;
+      document.getElementById('user-badge').innerText = `${userNickname} ${userName}`;
+      document.getElementById('user-display').classList.remove('hidden');
+
+      // 로비 대시보드 통계 바인딩
+      document.getElementById('lobby-attempts').innerText = `${userProfile.totalAttempts}회`;
+      document.getElementById('lobby-certs').innerText = `${userProfile.certificates.length}개`;
+      document.getElementById('btn-history-count').innerText = userProfile.certificates.length;
+
+      // 이수증 활성화 버튼 유효성 검사
+      const btnMenu = document.getElementById('btn-menu-cert');
+      if (userProfile.certificates.length > 0) {
+        btnMenu.classList.remove('opacity-60', 'cursor-not-allowed');
+        document.getElementById('menu-cert-status').innerText = "이수증 조회 활성화 &rarr;";
+      } else {
+        btnMenu.classList.add('opacity-60', 'cursor-not-allowed');
+        document.getElementById('menu-cert-status').innerText = "테스트 완수 후 활성화";
+      }
+
+      switchScreen('screen-main');
+    }
+
+    function handleLogout() {
+      // 자동 로그인 데이터 청소 및 완전 로그아웃
+      localStorage.removeItem('SOAP_CHEF_LAST_LOGIN');
+      activeUserKey = "";
+      userName = "";
+      userNickname = "";
+      userProfile = { userName: "", userNickname: "", totalAttempts: 0, certificates: [] };
+
+      document.getElementById('input-username').value = "";
+      document.getElementById('input-nickname').value = "";
+      document.getElementById('user-display').classList.add('hidden');
+      document.getElementById('btn-cert-lobby').classList.add('hidden');
+
+      switchScreen('screen-login');
+      showToast("로그아웃 되었습니다. 세션 데이터가 안전하게 보관되었습니다.", "info");
+      sound.playSuccess();
+    }
+
+    function switchScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(scr => scr.classList.add('hidden'));
+      document.getElementById(screenId).classList.remove('hidden');
+    }
+
+    const layerSVGs = {
+      bottomBun: `
+        <svg class="burger-piece active w-44 h-10" viewBox="0 0 200 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 20C10 32 30 35 100 35C170 35 190 32 190 20C190 15 170 15 100 15C30 15 10 15 10 20Z" fill="#D97706"/>
+          <path d="M15 18C15 25 35 28 100 28C165 28 185 25 185 18" stroke="#B45309" stroke-width="2"/>
+        </svg>
+      `,
+      lettuce: `
+        <svg class="burger-piece active w-48 h-8" viewBox="0 0 210 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 15C15 5 40 25 70 15C100 5 120 25 150 15C180 5 195 20 205 15C205 25 180 25 150 25C120 25 100 25 70 25C40 25 15 25 5 15Z" fill="#22C55E"/>
+        </svg>
+      `,
+      meat: `
+        <svg class="burger-piece active w-44 h-10" viewBox="0 0 200 35" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="15" y="5" width="170" height="23" rx="8" fill="#5F2D14"/>
+          <rect x="25" y="8" width="150" height="3" fill="#3D1C0C"/>
+          <rect x="35" y="15" width="130" height="3" fill="#3D1C0C"/>
+        </svg>
+      `,
+      tomato: `
+        <svg class="burger-piece active w-44 h-9" viewBox="0 0 200 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="4" width="75" height="18" rx="7" fill="#EF4444"/>
+          <rect x="105" y="4" width="75" height="18" rx="7" fill="#EF4444"/>
+          <circle cx="55" cy="13" r="3.5" fill="#FCA5A5"/>
+          <circle cx="140" cy="13" r="3.5" fill="#FCA5A5"/>
+        </svg>
+      `,
+      cheese: `
+        <svg class="burger-piece active w-46 h-8" viewBox="0 0 205 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 5H195L180 25L130 15L100 25L50 15L10 5Z" fill="#F59E0B"/>
+        </svg>
+      `,
+      topBun: `
+        <svg class="burger-piece active w-44 h-14" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 40C10 15 30 5 100 5C170 5 190 15 190 40C190 42 170 42 100 42C30 42 10 42 10 40Z" fill="#D97706"/>
+          <!-- Sesame seeds -->
+          <ellipse cx="60" cy="18" rx="1.5" ry="3" transform="rotate(30 60 18)" fill="#FEF3C7"/>
+          <ellipse cx="100" cy="14" rx="1.5" ry="3" transform="rotate(-15 100 14)" fill="#FEF3C7"/>
+          <ellipse cx="140" cy="22" rx="1.5" ry="3" transform="rotate(45 140 22)" fill="#FEF3C7"/>
+        </svg>
+      `
+    };
+
+    function renderBurgerStack() {
+      const container = document.getElementById('burger-visual-container');
+      container.innerHTML = '';
+      
+      const bBun = document.createElement('div');
+      bBun.innerHTML = layerSVGs.bottomBun;
+      container.appendChild(bBun);
+
+      currentBurgerPieces.forEach(pName => {
+        const item = document.createElement('div');
+        item.className = "transform-gpu transition-all duration-300 ease-out";
+        item.innerHTML = layerSVGs[pName];
+        container.appendChild(item);
+      });
+    }
+
+    function triggerConfettiEffect() {
+      const root = document.getElementById('burger-visual-container');
+      const colors = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#f43f5e'];
+      
+      for (let i = 0; i < 20; i++) {
+        const div = document.createElement('div');
+        div.className = 'absolute w-2 h-2 rounded-full pointer-events-none z-30';
+        div.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        div.style.left = '50%';
+        div.style.top = '65%';
+        div.style.transform = 'translate(-50%, -50%)';
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 3 + Math.random() * 5;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed - 2; 
+        
+        let x = 0; let y = 0; let op = 1.0;
+        root.appendChild(div);
+
+        const intv = setInterval(() => {
+          x += vx; y += vy; op -= 0.04;
+          div.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+          div.style.opacity = op;
+          if (op <= 0) {
+            clearInterval(intv);
+            div.remove();
+          }
+        }, 16);
+      }
+    }
+
+    function renderStrikes() {
+      const display = document.getElementById('strikes-display');
+      if (currentStage === 5) {
+        display.innerHTML = '<span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">♾️ 무제한 복습</span>';
+        document.getElementById('strike-warning-text').classList.add('hidden');
+        return;
+      }
+      let html = '';
+      for (let i = 0; i < 3; i++) {
+        if (i < currentStrikes) {
+          html += '<span class="filter grayscale opacity-30">🔴</span>';
+        } else {
+          html += '<span>🔴</span>';
+        }
+      }
+      display.innerHTML = html;
+
+      const textWarn = document.getElementById('strike-warning-text');
+      if (currentStrikes >= 2) {
+        textWarn.classList.remove('hidden');
+      } else {
+        textWarn.classList.add('hidden');
+      }
+    }
+
+    function startStandardTriageRun() {
+      globalAttempts++;
+      currentStage = 1;
+      currentScore = 0;
+      currentCombo = 0;
+      totalCookedBurgers = 0;
+      gameSecondsElapsed = 0;
+      isPaused = false;
+      
+      sessionLogs.overallAnswersLogged = 0;
+      sessionLogs.overallCorrectOnFirstTry = 0;
+      sessionLogs.wrongAnswers1to4 = [];
+      sessionLogs.stage5QuestionsToReview = [];
+      sessionLogs.stage5WrongLog = [];
+      sessionLogs.stage5Correct = 0;
+      sessionLogs.stage5Wrong = 0;
+      sessionLogs.stageAttempts = { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 };
+      sessionLogs.stageClears = { 1: false, 2: false, 3: false, 4: false, 5: false };
+      
+      for (let key in sessionLogs.defectClassification) {
+        sessionLogs.defectClassification[key] = 0;
+      }
+
+      switchScreen('screen-game');
+      initiateStage(1);
+    }
+
+    function initiateStage(stageId) {
+      currentStage = stageId;
+      currentStrikes = 0;
+      stageQuestionIndex = 0;
+      currentBurgerPieces = [];
+      isPaused = false;
+      
+      renderStrikes();
+
+      if (currentStage === 1) {
+      activeQuestions = [...scenarioDatabase.stage1].sort(() => Math.random() - 0.5).slice(0, 10);
+     }
+      else if (currentStage === 2) {
+        const medicineSample = [...scenarioDatabase.stage2InternalMedicine].sort(() => Math.random() - 0.5).slice(0, 5);
+        const orthoSample = [...scenarioDatabase.stage2Orthopedics].sort(() => Math.random() - 0.5).slice(0, 5);
+        activeQuestions = [...medicineSample, ...orthoSample].sort(() => Math.random() - 0.5);
+      } 
+      else if (currentStage === 3) {
+        const medicineSample = [...scenarioDatabase.stage3InternalMedicine].sort(() => Math.random() - 0.5).slice(0, 5);
+        const orthoSample = [...scenarioDatabase.stage3Orthopedics].sort(() => Math.random() - 0.5).slice(0, 5);
+        activeQuestions = [...medicineSample, ...orthoSample].sort(() => Math.random() - 0.5);
+      } 
+      else if (currentStage === 4) {
+        const pools = scenarioDatabase.stage4Pools;
+        const chosen = [];
+        const backup = [];
+
+        for (let key in pools) {
+          const poolCopy = [...pools[key]].sort(() => Math.random() - 0.5);
+          chosen.push(poolCopy[0]);
+          for (let i = 1; i < poolCopy.length; i++) {
+            backup.push(poolCopy[i]);
+          }
+        }
+
+        const shuffledBackup = backup.sort(() => Math.random() - 0.5);
+        chosen.push(shuffledBackup[0]);
+        chosen.push(shuffledBackup[1]);
+
+        activeQuestions = chosen.sort(() => Math.random() - 0.5);
+      } 
+      else {
+        const uniqueFailedIds = [...new Set(sessionLogs.wrongAnswers1to4.map(item => item.id))];
+        let compiledReviewPool = [];
+        
+        uniqueFailedIds.forEach(id => {
+          let matched = scenarioDatabase.stage1.find(q => q.id === id);
+          if (!matched) matched = scenarioDatabase.stage2InternalMedicine.find(q => q.id === id);
+          if (!matched) matched = scenarioDatabase.stage2Orthopedics.find(q => q.id === id);
+          if (!matched) matched = scenarioDatabase.stage3InternalMedicine.find(q => q.id === id);
+          if (!matched) matched = scenarioDatabase.stage3Orthopedics.find(q => q.id === id);
+          if (!matched) {
+            for (let k in scenarioDatabase.stage4Pools) {
+              const q = scenarioDatabase.stage4Pools[k].find(q => q.id === id);
+              if (q) {
+                matched = q;
+                break;
+              }
+            }
+          }
+          
+          if (matched) compiledReviewPool.push(matched);
+        });
+
+        if (compiledReviewPool.length === 0) {
+          showToast("오진 제로 달성! 정밀 종합 모의 5문항을 우회 구성합니다.", "success");
+          let flatAll = [
+            ...scenarioDatabase.stage1, 
+            ...scenarioDatabase.stage2InternalMedicine, 
+            ...scenarioDatabase.stage2Orthopedics, 
+            ...scenarioDatabase.stage3InternalMedicine,
+            ...scenarioDatabase.stage3Orthopedics
+          ];
+          for (let k in scenarioDatabase.stage4Pools) {
+            flatAll = flatAll.concat(scenarioDatabase.stage4Pools[k]);
+          }
+          compiledReviewPool = flatAll.sort(() => Math.random() - 0.5).slice(0, 5);
+        }
+
+        activeQuestions = compiledReviewPool;
+        sessionLogs.stage5QuestionsToReview = [...activeQuestions];
+        sessionLogs.stage5InitialCount = activeQuestions.length;
+        sessionLogs.stage5Correct = 0;
+        sessionLogs.stage5Wrong = 0;
+        sessionLogs.stage5WrongLog = [];
+      }
+
+      updateStageIndicatorsText();
+      openStageIntroModal();
+    }
+
+    function updateStageIndicatorsText() {
+      const gameTitle = document.getElementById('game-stage-indicator');
+      const sf = document.getElementById('stage-score-factor');
+      
+      let title = "";
+      let scoreText = "";
+
+      switch(currentStage) {
+        case 1:
+          title = "1단계: 명확매칭형";
+          scoreText = "1단계: 정답 시 +10점";
+          break;
+        case 2:
+          title = "2단계: 내과&정형외과 혼합";
+          scoreText = "2단계: 정답 시 +15점";
+          break;
+        case 3:
+          title = "3단계: 모호/교차형 (내과&OS)";
+          scoreText = "3단계: 정답 시 +20점";
+          break;
+        case 4:
+          title = "4단계: 환자 안전/임상대응";
+          scoreText = "4단계: 정답 시 +25점";
+          break;
+        case 5:
+          title = "5단계: 종합 오답 점검 복습";
+          scoreText = "5단계: 정답 시 +30점";
+          break;
+      }
+
+      gameTitle.innerText = title;
+      sf.innerText = scoreText;
+    }
+
+    function openStageIntroModal() {
+      const modal = document.getElementById('modal-stage-intro');
+      const emoji = document.getElementById('modal-stage-emoji');
+      const title = document.getElementById('modal-stage-title');
+      const desc = document.getElementById('modal-stage-desc');
+
+      let e = "📋";
+      let t = "";
+      let d = "";
+
+      switch(currentStage) {
+        case 1:
+          e = "🔍"; t = "1단계: 명확매칭형 검정 안내";
+          d = "기본적인 활력 징후와 신체 증상을 대조하여 올바른 진단과 중재 계획을 매칭하십시오. (총 10문항, 오답 3회 제한)";
+          break;
+        case 2:
+          e = "🌪"; t = "2단계: 내과 및 정형외과 혼합형 개시";
+          d = "내과(5문항)와 정형외과(5문항)가 실시간 병렬 조합되어 무작위 출제됩니다. 전문 임상 위임 중재에 맞게 진단(A)과 계획(P)을 조리하십시오. (총 10문항, 오답 3회 제한)";
+          break;
+        case 3:
+          e = "⚡"; t = "3단계: 모호/교차형 진단 분석 개시";
+          d = "내과(5문항)와 정형외과(5문항)의 교차성 임상 변별력을 테스트합니다. 비전형적 징후와 세밀한 소견을 분석하여 오진을 통제하십시오. (총 10문항, 오답 3회 제한)";
+          break;
+        case 4:
+          e = "🚨"; t = "4단계: 환자 안전 및 임상사건 대처 개시";
+          d = "수혈 부작용, 위급 상황 대처, 주사침 침습 사고 등 고위험 안전 지표 대응 훈련입니다. 우선순위 의사결정을 실증하십시오. (총 10문항, 오답 3회 제한)";
+          break;
+        case 5:
+          e = "🎓"; t = "5단계: 동적 약점 보완 오답 복습 개시";
+          d = `이전 테스트에서 훈련생이 최초 실패 처리한 취약 문항들을 맞춤형 복습합니다. 이 단계는 3번 이상 틀려도 탈락하지 않고 오답을 마칠 때까지 무제한 진행 가능합니다. (복습 문항수: ${activeQuestions.length}개)`;
+          break;
+      }
+
+      emoji.innerText = e;
+      title.innerText = t;
+      desc.innerText = d.replace(/\n/g, '<br>');
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeStageIntroModal() {
+      document.getElementById('modal-stage-intro').classList.add('hidden');
+      loadActiveQuestion();
+      startTimer();
+    }
+
+    function loadActiveQuestion() {
+      if (stageQuestionIndex >= activeQuestions.length) {
+        sessionLogs.stageClears[currentStage] = true;
+        sound.playStageClear();
+        showToast(`${currentStage}단계 완수 완료!`, "success");
+
+        if (currentStage < 5) {
+          initiateStage(currentStage + 1);
+        } else {
+          endGameFlow();
+        }
+        return;
+      }
+
+      const scen = activeQuestions[stageQuestionIndex];
+      document.getElementById('case-index').innerText = (stageQuestionIndex + 1).toString().padStart(2, '0');
+      document.getElementById('case-total').innerText = activeQuestions.length;
+      document.getElementById('soap-s').innerText = `"${scen.s}"`;
+      document.getElementById('soap-o').innerText = scen.o;
+
+      const badge = document.getElementById('badge-defect-cat');
+      badge.innerText = scen.defectCategory || "임상 추론";
+
+      selectedA = null;
+      selectedP = null;
+      selectedAElement = null;
+      selectedPElement = null;
+      document.getElementById('text-selected-opt-a').innerText = "없음";
+      document.getElementById('text-selected-opt-p').innerText = "없음";
+
+      populateDualScrambledOptions(scen);
+      renderBurgerStack();
+    }
+
+    function populateDualScrambledOptions(scen) {
+      const gridA = document.getElementById('options-grid-a');
+      const gridP = document.getElementById('options-grid-p');
+      gridA.innerHTML = '';
+      gridP.innerHTML = '';
+
+      // 1. Diagnosis (A) Options
+      const scrambledA = [...scen.options].sort(() => Math.random() - 0.5);
+      scrambledA.forEach(textOpt => {
+        const card = document.createElement('div');
+        card.className = "glass-panel p-3 rounded-xl cursor-grab active:cursor-grabbing border border-slate-800 hover:border-amber-500 hover:bg-slate-900 transition-all text-xs font-semibold text-slate-200 select-none flex items-center justify-between";
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-choice', textOpt);
+
+        card.addEventListener('dragstart', (e) => {
+          if (isPaused) return e.preventDefault();
+          selectedA = textOpt;
+          selectedAElement = card;
+          e.dataTransfer.setData('text/a', textOpt);
+        });
+
+        card.addEventListener('click', () => {
+          if (isPaused) return;
+          document.querySelectorAll('#options-grid-a > div').forEach(c => c.classList.remove('card-selected-a'));
+          selectedA = textOpt;
+          selectedAElement = card;
+          card.classList.add('card-selected-a');
+          document.getElementById('text-selected-opt-a').innerText = textOpt;
+          sound.playSuccess();
+        });
+
+        card.innerHTML = `<span>${textOpt}</span> <span class="text-[9px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded flex-shrink-0">진단</span>`;
+        gridA.appendChild(card);
+      });
+
+      // 2. Plan (P) Options
+      let scrambledP = [];
+      if (scen.p_options && scen.p_options.length > 0) {
+        scrambledP = [...scen.p_options].sort(() => Math.random() - 0.5);
+      } else {
+        let pDistractors = [];
+        const parentList = (currentStage === 2) 
+          ? [...scenarioDatabase.stage2InternalMedicine, ...scenarioDatabase.stage2Orthopedics]
+          : (currentStage === 3)
+            ? [...scenarioDatabase.stage3InternalMedicine, ...scenarioDatabase.stage3Orthopedics]
+            : (scenarioDatabase[`stage${currentStage}`] || scenarioDatabase.stage1);
+
+        pDistractors = parentList
+          .map(q => q.p)
+          .filter(pText => pText !== scen.p)
+          .sort(() => Math.random() - 0.5);
+        
+        pDistractors = [...new Set(pDistractors)].slice(0, 3);
+        scrambledP = [scen.p, ...pDistractors].sort(() => Math.random() - 0.5);
+      }
+
+      scrambledP.forEach(textOpt => {
+        const card = document.createElement('div');
+        card.className = "glass-panel p-3 rounded-xl cursor-grab active:cursor-grabbing border border-slate-800 hover:border-sky-500 hover:bg-slate-900 transition-all text-xs font-semibold text-slate-200 select-none flex items-center justify-between";
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-choice', textOpt);
+
+        card.addEventListener('dragstart', (e) => {
+          if (isPaused) return e.preventDefault();
+          selectedP = textOpt;
+          selectedPElement = card;
+          e.dataTransfer.setData('text/p', textOpt);
+        });
+
+        card.addEventListener('click', () => {
+          if (isPaused) return;
+          document.querySelectorAll('#options-grid-p > div').forEach(c => c.classList.remove('card-selected-p'));
+          selectedP = textOpt;
+          selectedPElement = card;
+          card.classList.add('card-selected-p');
+          document.getElementById('text-selected-opt-p').innerText = textOpt;
+          sound.playSuccess();
+        });
+
+        card.innerHTML = `<span class="truncate pr-1">${textOpt}</span> <span class="text-[9px] bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded flex-shrink-0">수행</span>`;
+        gridP.appendChild(card);
+      });
+    }
+
+    function allowCardDragOver(e) {
+      if (isPaused) return;
+      e.preventDefault();
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleCardDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleCardDrop(e) {
+      if (isPaused) return;
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over');
+      
+      const valA = e.dataTransfer.getData('text/a');
+      const valP = e.dataTransfer.getData('text/p');
+
+      if (valA && e.currentTarget.id === 'drop-zone-a') {
+        selectedA = valA;
+        document.getElementById('text-selected-opt-a').innerText = valA;
+        sound.playSuccess();
+      }
+      if (valP && e.currentTarget.id === 'drop-zone-p') {
+        selectedP = valP;
+        document.getElementById('text-selected-opt-p').innerText = valP;
+        sound.playSuccess();
+      }
+    }
+
+    function evaluateDualMatchingAnswer() {
+      if (isPaused) return;
+      
+      if (!selectedA || !selectedP) {
+        showToast("의학 진단(A) 패티와 수행 계획(P) 소스를 모두 골라 수립하십시오!", "info");
+        return;
+      }
+
+      const activeScen = activeQuestions[stageQuestionIndex];
+      const correctA = activeScen.a;
+      const correctP = activeScen.p;
+      
+      sessionLogs.overallAnswersLogged++;
+
+      const isACorrect = (selectedA === correctA);
+      const isPCorrect = (selectedP === correctP);
+
+      if (isACorrect && isPCorrect) {
+        let pts = 0;
+        switch(currentStage) {
+          case 1: pts = 10; break;
+          case 2: pts = 15; break;
+          case 3: pts = 20; break;
+          case 4: pts = 25; break;
+          case 5: pts = 30; break;
+        }
+
+        currentScore += pts;
+        currentCombo++;
+        sound.playSuccess();
+        triggerConfettiEffect();
+        flashTriageScreenIndicator('rgba(16, 185, 129, 0.15)');
+        
+        const randIng = BURGER_INGREDIENT_POOL[Math.floor(Math.random() * BURGER_INGREDIENT_POOL.length)];
+        currentBurgerPieces.push(randIng);
+        
+        if (currentStage <= 4) {
+          const alreadyFailed = sessionLogs.wrongAnswers1to4.some(item => item.id === activeScen.id);
+          if (!alreadyFailed) {
+            sessionLogs.overallCorrectOnFirstTry++;
+          }
+        } else {
+          sessionLogs.stage5Correct++;
+        }
+
+        showToast(`임상 기록 작성 및 수행 계획 완벽 일치! (+${pts}점) [${currentCombo} 콤보]`, "success");
+
+        if (currentBurgerPieces.length >= 4) {
+          currentBurgerPieces.push('topBun');
+          renderBurgerStack();
+          
+          setTimeout(() => {
+            sound.playStageClear();
+            totalCookedBurgers++;
+            document.getElementById('scoreboard-cooked').innerText = totalCookedBurgers;
+            showToast("🍔 수행 기록이 완료된 버거가 수동 병동으로 전송되었습니다.", "success");
+            currentBurgerPieces = [];
+            renderBurgerStack();
+          }, 2500);
+        }
+
+        stageQuestionIndex++;
+        loadActiveQuestion();
+
+      } else {
+        currentCombo = 0;
+        currentStrikes++;
+        sound.playError();
+        flashTriageScreenIndicator('rgba(239, 68, 68, 0.25)');
+
+        let feedbackMsg = "임상 분석 및 수행 실패! ";
+        if (!isACorrect && !isPCorrect) {
+          feedbackMsg += "진단(A)과 수행 계획(P)이 모두 오류입니다.";
+        } else if (!isACorrect) {
+          feedbackMsg += "진단(A) 수립이 부적절합니다.";
+        } else {
+          feedbackMsg += "수행 계획(P) 수립 오류가 발견되었습니다.";
+        }
+        showToast(feedbackMsg, "error");
+
+        if (currentStage <= 4) {
+          const matchedDefect = activeScen.defectCategory || "임상적 특이 징후 간과";
+          sessionLogs.defectClassification[matchedDefect]++;
+          
+          sessionLogs.wrongAnswers1to4.push({
+            id: activeScen.id,
+            stage: currentStage,
+            question: activeScen.s + " / " + activeScen.o,
+            selected: `A: ${selectedA} | P: ${selectedP}`,
+            correct: `A: ${correctA} | P: ${correctP}`,
+            rationale: activeScen.rationale || "오답 사정 피드백",
+            defectCategory: matchedDefect
+          });
+        } else {
+          sessionLogs.stage5Wrong++;
+          sessionLogs.stage5WrongLog.push({
+            question: activeScen.s + " / " + activeScen.o,
+            selected: `A: ${selectedA} | P: ${selectedP}`,
+            correct: `A: ${correctA} | P: ${correctP}`,
+            rationale: activeScen.rationale || "5단계 복습 오답 사정 피드백"
+          });
+        }
+
+        renderStrikes();
+
+        if (currentStrikes >= 3 && currentStage !== 5) {
+          sound.playError();
+          openStageFailureModal();
+          return;
+        }
+
+        stageQuestionIndex++;
+        loadActiveQuestion();
+      }
+
+      document.getElementById('scoreboard-score').innerText = currentScore;
+      document.getElementById('scoreboard-combo').innerText = currentCombo;
+    }
+
+    function flashTriageScreenIndicator(rgbaStyle) {
+      document.body.style.backgroundColor = rgbaStyle;
+      setTimeout(() => {
+        document.body.style.backgroundColor = '';
+      }, 200);
+    }
+
+    function openStageFailureModal() {
+      const desc = document.getElementById('modal-fail-desc');
+      desc.innerHTML = `
+        현재 <b>${currentStage}단계</b> 검정 중 오진 한도 초과(3회 스트라이크) 상태에 도달했습니다.<br>
+        환자 지표 안정 및 안전 수칙을 위해 <b>해당 단계를 처음(1번 문항)부터 강제 리셋</b>합니다.<br><br>
+        <span class="text-xs text-rose-400">💡 팁: S(주관적 호소)와 O(객관적 생체 징후)를 세밀하게 살피고 진단(A)과 수행 계획(P)을 정량 수립하십시오.</span>
+      `;
+      sessionLogs.stageAttempts[currentStage]++;
+      document.getElementById('modal-stage-fail').classList.remove('hidden');
+    }
+
+    function restartFailedStage() {
+      document.getElementById('modal-stage-fail').classList.add('hidden');
+      initiateStage(currentStage);
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!isPaused) {
+          gameSecondsElapsed += 0.1;
+        }
+      }, 100);
+    }
+
+    function pauseTriageGame() {
+      isPaused = true;
+      sound.playAlarm();
+      
+      document.getElementById('pause-status-stage').innerText = `${currentStage}단계`;
+      document.getElementById('pause-status-question').innerText = `${(stageQuestionIndex + 1).toString().padStart(2, '0')} / ${activeQuestions.length}`;
+      document.getElementById('pause-status-score').innerText = `${currentScore}점`;
+
+      document.getElementById('modal-pause').classList.remove('hidden');
+    }
+
+    function resumeTriageGame() {
+      isPaused = false;
+      sound.playSuccess();
+      document.getElementById('modal-pause').classList.add('hidden');
+    }
+
+    /* 게임진행 복귀 제어 모달 트리거 함수 */
+    function returnToMainMenu() {
+      isPaused = true;
+      sound.playAlarm();
+      document.getElementById('modal-confirm-main').classList.remove('hidden');
+    }
+
+    function closeReturnConfirm() {
+      document.getElementById('modal-confirm-main').classList.add('hidden');
+      isPaused = false;
+      sound.playSuccess();
+    }
+
+    function confirmReturnToMain() {
+      document.getElementById('modal-confirm-main').classList.add('hidden');
+      
+      clearInterval(timerInterval);
+      timerInterval = null;
+      isPaused = false;
+
+      currentStrikes = 0;
+      stageQuestionIndex = 0;
+      selectedA = null;
+      selectedP = null;
+      selectedAElement = null;
+      selectedPElement = null;
+      currentBurgerPieces = [];
+
+      document.getElementById('text-selected-opt-a').innerText = "없음";
+      document.getElementById('text-selected-opt-p').innerText = "없음";
+
+      setupAndTransitionToMain();
+      showToast("메인 화면으로 복귀하였습니다. 진행 세션이 정리되었습니다.", "info");
+    }
+
+    function endGameFlow() {
+      clearInterval(timerInterval);
+
+      // 계정 프로필의 응시 횟수 및 이수증 누적 가산 처리
+      userProfile.totalAttempts++;
+      
+      const attemptedTotal = sessionLogs.overallAnswersLogged;
+      const accurateCount = (attemptedTotal - (sessionLogs.wrongAnswers1to4.length + sessionLogs.stage5Wrong));
+      const accuracyRate = attemptedTotal > 0 ? Math.round((accurateCount / attemptedTotal) * 100) : 100;
+
+      let tier = "초급 안전사정원";
+      if (currentScore >= 500 && accuracyRate >= 85) tier = "특급 임상수석장";
+      else if (currentScore >= 350 && accuracyRate >= 70) tier = "1급 전문의무사";
+      else if (currentScore >= 200) tier = "2급 숙련처방조장";
+
+      // 신규 이수증 개체 직렬화 백업 빌드
+      const newCertId = userProfile.certificates.length + 1;
+      const completedStamp = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) + " " + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      
+      const newCertData = {
+        id: newCertId,
+        completedAt: completedStamp,
+        score: currentScore,
+        accuracy: accuracyRate,
+        tier: tier,
+        totalCookedBurgers: totalCookedBurgers,
+        globalAttempts: globalAttempts,
+        wrongAnswers1to4: JSON.parse(JSON.stringify(sessionLogs.wrongAnswers1to4)),
+        stage5WrongLog: JSON.parse(JSON.stringify(sessionLogs.stage5WrongLog)),
+        stage5Correct: sessionLogs.stage5Correct,
+        stage5InitialCount: sessionLogs.stage5InitialCount,
+        stage5Wrong: sessionLogs.stage5Wrong,
+        defectClassification: JSON.parse(JSON.stringify(sessionLogs.defectClassification)),
+        userName: userName,
+        userNickname: userNickname
+      };
+
+      // 누적 보관소에 안전 저장 및 동기화
+      userProfile.certificates.push(newCertData);
+      syncUserDataToStorage();
+
+      document.getElementById('result-score').innerText = `${currentScore}점`;
+      document.getElementById('result-accuracy').innerText = `${accuracyRate}%`;
+      document.getElementById('result-burgers').innerText = `${totalCookedBurgers}개`;
+      document.getElementById('result-attempts').innerText = `${globalAttempts}회`;
+
+      const btnLobby = document.getElementById('btn-cert-lobby');
+      btnLobby.classList.remove('hidden');
+      
+      const btnMenu = document.getElementById('btn-menu-cert');
+      btnMenu.classList.remove('opacity-60', 'cursor-not-allowed');
+      document.getElementById('menu-cert-status').innerText = "이수증 조회 활성화 &rarr;";
+
+      switchScreen('screen-result');
+
+      // 실시간 Canvas 드로잉 생성
+      drawHighResCertificateCanvas('cert-canvas', newCertData);
+    }
+
+    // Canvas 그리기 통합 함수 (실시간/보관함 공용)
+    function drawHighResCertificateCanvas(canvasId, certData) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+
+      const page1Height = 1000;
+      const page2Height = 1000;
+      
+      const wrongList1to4 = certData.wrongAnswers1to4 || [];
+      const wrongList5 = certData.stage5WrongLog || [];
+      const totalWrongItems = wrongList1to4.length + wrongList5.length;
+      
+      const wrongItemsPerPage = 5;
+      const extraPagesCount = Math.max(1, Math.ceil(totalWrongItems / wrongItemsPerPage));
+      const page3Height = extraPagesCount * 1000;
+      
+      const totalCanvasHeight = page1Height + page2Height + page3Height;
+      
+      canvas.width = 1000;
+      canvas.height = totalCanvasHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Base Background
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, 1000, totalCanvasHeight);
+
+      // --- PAGE 1: OFFICIAL LICENSE ---
+      renderCertPageFrame(ctx, 0, 1000, "PAGE 1 / " + (2 + extraPagesCount));
+      
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f43f5e';
+      ctx.font = 'bold 22px "Inter", sans-serif';
+      ctx.fillText("🏥 CLINICAL DECISION TRIAGE SYSTEM V5 🏥", 500, 120);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '900 48px "Inter", sans-serif';
+      ctx.fillText("임상 사정 및 중재 기록 전문 자격 이수증", 500, 185);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.beginPath(); ctx.moveTo(100, 230); ctx.lineTo(900, 230); ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 28px "Inter", sans-serif';
+      ctx.fillText(`이수자 성명: ${certData.userName}`, 120, 290);
+      ctx.fillText(`소속 / 기수: ${certData.userNickname}`, 120, 340);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '800 28px "Inter", sans-serif';
+      ctx.fillText(`부여 자격 등급: ${certData.tier}`, 880, 315);
+
+      // Page 1 Stats block
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(100, 400, 800, 140);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(100, 400, 800, 140);
+
+      ctx.beginPath(); ctx.moveTo(300, 400); ctx.lineTo(300, 540); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(500, 400); ctx.lineTo(500, 540); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(700, 400); ctx.lineTo(700, 540); ctx.stroke();
+
+      ctx.font = '12px "Inter", sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText("총 획득 점수", 120, 385);
+      ctx.fillText("종합 정답률", 320, 385);
+      ctx.fillText("총 응시 시도 횟수", 520, 385);
+      ctx.fillText("중재 완성 버거 수", 720, 385);
+
+      ctx.font = 'bold 36px "Inter", sans-serif';
+      ctx.fillStyle = '#f59e0b'; ctx.fillText(`${certData.score}점`, 120, 490);
+      ctx.fillStyle = '#10b981'; ctx.fillText(`${certData.accuracy}%`, 320, 490);
+      ctx.fillStyle = '#ef4444'; ctx.fillText(`${certData.globalAttempts}회`, 520, 490);
+      ctx.fillStyle = '#3b82f6'; ctx.fillText(`${certData.totalCookedBurgers}개`, 720, 490);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '13px "Inter", sans-serif';
+      ctx.fillText("본 이수증은 SOAP Chef V5 온라인 응급의료 사정 검증 프로그램에 의해 공식 인증되었습니다.", 120, 680);
+      ctx.fillText("이수증 코드가 발급된 본서는 법적 책임 소지가 없는 순수 교육 목적용 자격증명입니다.", 120, 710);
+
+      // Red seal stamps
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(800, 800, 55, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 14px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText("SOAP V5", 800, 792);
+      ctx.fillText("임상검인", 800, 815);
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '16px "Inter", sans-serif';
+      ctx.fillText(`발급일자: ${certData.completedAt}`, 120, 800);
+      ctx.fillText(`검인 번호: SC-V5-CERT-NO${certData.id}-${1000 + certData.score}`, 120, 840);
+
+
+      // --- PAGE 2: STATS & AUDIT LOGS ---
+      renderCertPageFrame(ctx, 1000, 1000, "PAGE 2 / " + (2 + extraPagesCount));
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 24px "Inter", sans-serif';
+      ctx.fillText("📌 1~5단계 개별 중재수행 및 이수 결과 현황", 100, 1090);
+
+      // 보관 내역 리스트 간접 복원
+      const stagesMeta = [
+        { label: "1단계 - 명확매칭형 (기초 의사결정 매칭)", clear: true, count: `완료` },
+        { label: "2단계 - 내과&정형외과 혼합 (상세 믹스 분석)", clear: true, count: `완료` },
+        { label: "3단계 - 모호교차형 (내과&OS 상세 기만 지표)", clear: true, count: `완료` },
+        { label: "4단계 - 환자안전대응 (안전수칙 및 관리)", clear: true, count: `완료` },
+        { label: `5단계 - 오답복습실 (취약 요인 집중 보완)`, clear: true, count: `복습 완료` }
+      ];
+
+      stagesMeta.forEach((stg, i) => {
+        const yPos = 1145 + (i * 45);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+        ctx.fillRect(100, yPos - 25, 800, 36);
+        
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 15px "Inter", sans-serif';
+        ctx.fillText("☑ 이수완료", 120, yPos);
+        
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText(stg.label, 250, yPos);
+        
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '13px "Inter", sans-serif';
+        ctx.fillText(stg.count, 740, yPos);
+      });
+
+      // Defect graph on Page 2
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 24px "Inter", sans-serif';
+      ctx.fillText("📊 SOAP 진료기록 결함 요인 정밀 분석 (1~4단계 누적 오답 요인)", 100, 1420);
+
+      const defectKeys = Object.keys(certData.defectClassification || sessionLogs.defectClassification);
+      const maxVal = Math.max(...Object.values(certData.defectClassification || sessionLogs.defectClassification), 1);
+
+      defectKeys.forEach((key, idx) => {
+        const val = (certData.defectClassification && certData.defectClassification[key]) || 0;
+        const yBar = 1465 + (idx * 30);
+        
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '12px "Inter", sans-serif';
+        ctx.fillText(key, 100, yBar);
+
+        // Render graphical percentage bar
+        const barWidth = (val / maxVal) * 450;
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.6)';
+        ctx.fillRect(400, yBar - 10, 450, 10);
+        
+        ctx.fillStyle = val > 0 ? '#ef4444' : '#10b981';
+        ctx.fillRect(400, yBar - 10, barWidth, 10);
+
+        ctx.fillStyle = val > 0 ? '#ef4444' : '#10b981';
+        ctx.font = 'bold 12px "Inter", sans-serif';
+        ctx.fillText(`${val}회`, 865, yBar);
+      });
+
+      // AI Recommendation
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 20px "Inter", sans-serif';
+      ctx.fillText("🧠 AI 스마트 정밀 교육 피드백 (맞춤형 임상 개선안)", 100, 1795);
+
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.05)';
+      ctx.fillRect(100, 1815, 800, 110);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(100, 1815, 800, 110);
+
+      let highestDefect = "";
+      let highestCount = 0;
+      defectKeys.forEach(k => {
+        const val = (certData.defectClassification && certData.defectClassification[k]) || 0;
+        if (val > highestCount) {
+          highestCount = val;
+          highestDefect = k;
+        }
+      });
+
+      let aiReport = "모든 SOAP 사정 능력이 균형을 이룹니다. 이대로 실전 병동에 즉시 투입 가능합니다!";
+      if (highestCount > 0) {
+        if (highestDefect.includes("주관적") || highestDefect.includes("활력징후")) {
+          aiReport = "환자의 임상적 주관 호소(S)와 객관적 수치(O)간의 연결 고리가 다소 불완전합니다. 위임된 지시를 확인하거나 간호 중재를 실행하기 전 생체징후 검사 측정값을 우선 대조 검증하는 프로토콜 강화를 제언합니다.";
+        } else if (highestDefect.includes("상관관계") || highestDefect.includes("우선순위")) {
+          aiReport = "다발성 증상 발현 시 질환의 우선 순위를 판독하는 능력을 보강하십시오. 복합증상이 중첩될 경우, 생명 유지와 직결되는 호흡기 및 심장계 징후를 최우선 진단으로 판단하는 우선순위 알고리즘 적용을 권장합니다.";
+        } else if (highestDefect.includes("안전") || highestDefect.includes("유실")) {
+          aiReport = "환자 안전 지표와 투약 및 카운팅 절차상에서 간과가 발견되었습니다. 투약 시 동료 2인 교차 서명(Double Check)과 위기 처지 매뉴얼을 반복 검토하여 임상 사건 위험성을 원천 차단하십시오.";
+        } else {
+          aiReport = "모호한 통증이나 atypical 임상 양상을 분석할 때 임상 오진 편견 소지가 존재합니다. 전형적인 진단 기준 외 특이 케이스(무통성 심근경색 등)의 보조 지표를 면밀히 분석하는 정밀 훈련이 추천됩니다.";
+        }
+      }
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 13px "Inter", sans-serif';
+      ctx.fillText(`[주요 결함 요인: ${highestDefect || "무결함"}]`, 120, 1845);
+      
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12.5px "Inter", sans-serif';
+      wrapTextCanvas(ctx, aiReport, 120, 1870, 760, 20);
+
+
+      // --- PAGE 3+: WRONG ANSWER DETAILS (Y: 2000+) ---
+      const compiledAllWrongs = [];
+      wrongList1to4.forEach((w) => {
+        compiledAllWrongs.push({
+          tag: `[1-4단계 오답사례]`,
+          question: w.question,
+          selected: w.selected,
+          correct: w.correct,
+          rationale: w.rationale,
+          desc: w.defectCategory
+        });
+      });
+      wrongList5.forEach((w) => {
+        compiledAllWrongs.push({
+          tag: `[5단계 복습 실패]`,
+          question: w.question,
+          selected: w.selected,
+          correct: w.correct,
+          rationale: w.rationale,
+          desc: "5단계 최종 오답 미교정"
+        });
+      });
+
+      for (let pIdx = 0; pIdx < extraPagesCount; pIdx++) {
+        const pageYOffset = 2000 + (pIdx * 1000);
+        renderCertPageFrame(ctx, pageYOffset, 1000, `PAGE ${3 + pIdx} / ${2 + extraPagesCount}`);
+        
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 24px "Inter", sans-serif';
+        ctx.fillText(`✍️ 임상 기록 오답 상세 분석 및 정밀 복습 피드백 (Case #${(pIdx*wrongItemsPerPage)+1}~)`, 100, pageYOffset + 80);
+
+        if (pIdx === 0) {
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(100, pageYOffset + 110, 800, 65);
+          ctx.strokeStyle = '#1e293b';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(100, pageYOffset + 110, 800, 65);
+          
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = 'bold 13px "Inter", sans-serif';
+          ctx.fillText("🔄 [5단계 오답 복습 결과 요약]", 120, pageYOffset + 135);
+          ctx.font = '13px "Inter", sans-serif';
+          ctx.fillText(`총 복습 문제 수: ${certData.stage5InitialCount || 0}개  |  복습 합격 수: ${certData.stage5Correct || 0}개  |  복습 최종 오답 수: ${certData.stage5Wrong || 0}개`, 120, pageYOffset + 158);
+        }
+
+        const startIndex = pIdx * wrongItemsPerPage;
+        const endIndex = Math.min(startIndex + wrongItemsPerPage, compiledAllWrongs.length);
+        const yItemStart = pIdx === 0 ? pageYOffset + 200 : pageYOffset + 120;
+
+        if (compiledAllWrongs.length === 0) {
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
+          ctx.fillRect(100, yItemStart, 800, 150);
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)';
+          ctx.strokeRect(100, yItemStart, 800, 150);
+          
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 16px "Inter", sans-serif';
+          ctx.fillText("오답 기록이 존재하지 않습니다! 완전 무결한 중재 수행 능력을 증명하셨습니다.", 140, yItemStart + 80);
+        } else {
+          for (let i = startIndex; i < endIndex; i++) {
+            const item = compiledAllWrongs[i];
+            const relativeIdx = i - startIndex;
+            const itemY = yItemStart + (relativeIdx * 145);
+
+            ctx.fillStyle = '#0b0f19';
+            ctx.fillRect(100, itemY, 800, 130);
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(100, itemY, 800, 130);
+
+            ctx.fillStyle = '#f43f5e';
+            ctx.font = 'bold 11px "Inter", sans-serif';
+            ctx.fillText(`${item.tag} ${item.desc}`, 120, itemY + 22);
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 12.5px "Inter", sans-serif';
+            const truncatedQ = item.question.length > 78 ? item.question.substring(0, 78) + "..." : item.question;
+            ctx.fillText(`Q: ${truncatedQ}`, 120, itemY + 45);
+
+            ctx.fillStyle = '#f43f5e'; 
+            ctx.font = '12px "Inter", sans-serif';
+            ctx.fillText(`선택: ${item.selected}`, 120, itemY + 70);
+            
+            ctx.fillStyle = '#10b981'; 
+            ctx.fillText(`정답: ${item.correct}`, 430, itemY + 70);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'italic 11px "Inter", sans-serif';
+            ctx.fillText(`의학적 근거 & 대처: ${item.rationale}`, 120, itemY + 95);
+          }
+        }
+      }
+    }
+
+    function renderCertPageFrame(ctx, yOffset, pageHeight, pageNumLabel) {
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(40, yOffset + 40, 920, pageHeight - 80);
+
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(40, yOffset + 40, 920, pageHeight - 80);
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(52, yOffset + 52, 896, pageHeight - 104);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.beginPath(); ctx.moveTo(60, yOffset + 60); ctx.lineTo(940, yOffset + 60); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(60, yOffset + pageHeight - 60); ctx.lineTo(940, yOffset + pageHeight - 60); ctx.stroke();
+
+      ctx.beginPath(); ctx.moveTo(60, yOffset + 60); ctx.lineTo(60, yOffset + pageHeight - 60); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(940, yOffset + 60); ctx.lineTo(940, yOffset + pageHeight - 60); ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 11px "Inter", sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(pageNumLabel, 920, yOffset + 80);
+      ctx.textAlign = 'left';
+      ctx.fillText("SOAP CHEF CLINICAL V5", 80, yOffset + 80);
+    }
+
+    function downloadCertificate() {
+      const canvas = document.getElementById('cert-canvas');
+      const link = document.createElement("a");
+      link.download = `SOAP_CHEF_V5_REPORT_${userName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      showToast("모든 페이지가 병합된 고화질 통합 이수증이 성공적으로 다운로드되었습니다!", "success");
+    }
+
+    // 아카이빙된 특정 이수증을 가상 캔버스에 즉시 그려 PNG로 내보내는 샌드박스 드로잉 엔진
+    function downloadSpecificCertificate(certId) {
+      const found = userProfile.certificates.find(c => c.id === certId);
+      if (!found) {
+        showToast("이수증 데이터를 찾을 수 없습니다.", "error");
+        return;
+      }
+
+      showToast("고화질 PNG 이수증 렌더링을 시작합니다. 잠시만 기다려주세요...", "info");
+      
+      // 백그라운드 샌드박스 캔버스를 통해 무결성 드로잉 수행
+      drawHighResCertificateCanvas('hidden-cert-canvas', found);
+
+      setTimeout(() => {
+        const canvas = document.getElementById('hidden-cert-canvas');
+        const link = document.createElement("a");
+        link.download = `SOAP_CHEF_V5_RECOVERY_REPORT_${found.userName}_${certId}회차.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        showToast(`${certId}회차 고화질 이수증 다운로드가 완료되었습니다!`, "success");
+      }, 500);
+    }
+
+    function wrapTextCanvas(context, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(" ");
+      let line = "";
+
+      for (let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + " ";
+        let metrics = context.measureText(testLine);
+        let testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          context.fillText(line, x, y);
+          line = words[n] + " ";
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      context.fillText(line, x, y);
+    }
+
+    // 누적 보관함 전용 모달 제어 로직
+    function openCertHistoryModal() {
+      const modal = document.getElementById('modal-cert-history');
+      const listContainer = document.getElementById('cert-history-list');
+      listContainer.innerHTML = "";
+
+      if (userProfile.certificates.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-10 text-slate-500 text-sm">
+            <span class="text-4xl block mb-2">📁</span>
+            아직 누적 보관된 이수증이 없습니다.<br>
+            통합 임상 검정을 완수하여 이수증을 획득하십시오!
+          </div>
+        `;
+      } else {
+        // 내림차순(최신순) 렌더링
+        const reversedCerts = [...userProfile.certificates].reverse();
+        reversedCerts.forEach((cert) => {
+          const card = document.createElement('div');
+          card.className = "bg-slate-900/90 border border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-slate-700";
+          card.innerHTML = `
+            <div class="space-y-1">
+              <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">${cert.id}회차 완수 이수증</span>
+              <p class="text-xs text-slate-400 pt-1">발급일시: <span class="text-slate-200 font-semibold">${cert.completedAt}</span></p>
+              <div class="flex gap-4 text-xs pt-1.5">
+                <span class="text-slate-400">최종 점수: <span class="text-orange-400 font-bold">${cert.score}점</span></span>
+                <span class="text-slate-400">정확도: <span class="text-teal-400 font-bold">${cert.accuracy}%</span></span>
+                <span class="text-slate-400">등급: <span class="text-indigo-400 font-bold">${cert.tier}</span></span>
+              </div>
+            </div>
+            <button onclick="downloadSpecificCertificate(${cert.id})" class="w-full md:w-auto px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-50 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1 shadow-lg shadow-emerald-950/20">
+              📥 PNG 다운로드
+            </button>
+          `;
+          listContainer.appendChild(card);
+        });
+      }
+
+      modal.classList.remove('hidden');
+      sound.playSuccess();
+    }
+function closeCertHistoryModal() {
+  const modal = document.getElementById('modal-cert-history');
+
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+    function viewLicenseFromMenu() {
+      if (userProfile.certificates.length > 0) {
+        // 가장 최근의 이수증 렌더링 및 출력
+        const latestCert = userProfile.certificates[userProfile.certificates.length - 1];
+        document.getElementById('result-score').innerText = `${latestCert.score}점`;
+        document.getElementById('result-accuracy').innerText = `${latestCert.accuracy}%`;
+        document.getElementById('result-burgers').innerText = `${latestCert.totalCookedBurgers}개`;
+        document.getElementById('result-attempts').innerText = `${latestCert.globalAttempts}회`;
+
+        switchScreen('screen-result');
+        drawHighResCertificateCanvas('cert-canvas', latestCert);
+      } else {
+        showToast("아직 이수 완료 내역이 존재하지 않습니다. 검정을 먼저 완료하십시오!", "error");
+      }
+    }
+
+    function showLobbyCertificate() {
+      viewLicenseFromMenu();
+    }
+
+    function resetGame() {
+      setupAndTransitionToMain();
+    }
+
+    window.onload = function() {
+      document.getElementById('input-username').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') enterChefKitchen();
+      });
+      document.getElementById('input-nickname').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') enterChefKitchen();
+      });
+
+      // 자동 로그인 쿠키/로컬 스토리지 검증 시퀀스
+      const autoLoginKey = localStorage.getItem('SOAP_CHEF_LAST_LOGIN');
+      if (autoLoginKey) {
+        const savedProfile = localStorage.getItem(autoLoginKey);
+        if (savedProfile) {
+          userProfile = JSON.parse(savedProfile);
+          userName = userProfile.userName;
+          userNickname = userProfile.userNickname;
+          activeUserKey = autoLoginKey;
+          
+          showToast(`임상전문가 ${userName}님으로 자동 로그인되었습니다.`, "success");
+          setupAndTransitionToMain();
+        }
+      }
+    };
+  </script>
+
+</body>
+</html>
